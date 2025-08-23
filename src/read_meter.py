@@ -3,6 +3,7 @@
 from imageio.v3 import imread
 from matplotlib.colors import rgb_to_hsv
 import numpy as np
+import string
 
 
 def read_config(config_path):
@@ -122,6 +123,62 @@ def read_meter(image_path, config):
     return reading
 
 
+def read_readings(filename):
+    """Read the readings from a file."""
+
+    readings = {}
+    with open(filename, 'r') as f:
+        for line in f:
+            name, rest = line.split(':')
+            # in rest, remove anything not a number or dot or space:
+            to_remove = list(string.punctuation)
+            to_remove.remove('.')
+            to_remove.append('±')
+            rest = rest.translate(str.maketrans('', '', ''.join(to_remove)))
+            mu = float(rest.split()[0])
+            sigma = float(rest.split()[1])
+            exponent = round(np.log10(float(name[1:])))
+            readings[exponent] = (mu, sigma)
+
+    return readings
+
+
+def digit(n, s):
+    return (10**-n * s) % 10
+
+
+def loglikelihood_uncentered(s, readings):
+    p = 0.
+    for n in readings.keys():
+        sigma2 = readings[n][1]**2
+        p += -0.5 * np.log(2 * np.pi * sigma2) \
+             - ((digit(n, s) - readings[n][0])**2 / (2 * sigma2))
+    return p
+
+
+def digit_centered(s, k, readings, offset=0.):
+    return (s * 10**-k - readings[k][0] + 5. - offset) % 10 - 5
+
+
+def loglikelihood(s, readings, offset=0.):
+    # The likelihood on the circle is the sum of the likelihoods in all
+    # "Brillouin" zones of
+    # the unwrapped likelihood. Wrapping means calculating an infinite sum over
+    # these zones. I don't want sums (bad for logarithms), and I don't want an
+    # infinite number of terms.
+    # Assumption: The normal distribution is much narrower than 1 Brillouin
+    # zone => we have to sum only a few zones.
+    # Trick: We center the first Brillouin zone on the maximum of the normal
+    # distribution => no summing, just crop to the first Brillouin zone.
+    # This centering is done by digit_centered().
+    p = 0.
+    for n in readings.keys():
+        sigma2 = readings[n][1]**2
+        p += -0.5 * np.log(2 * np.pi * sigma2) \
+             - digit_centered(s, n, readings, offset=offset)**2 / (2 * sigma2)
+    return p
+
+
 if __name__ == "__main__":
     from argparse import ArgumentParser
 
@@ -133,7 +190,12 @@ if __name__ == "__main__":
     # Example configuration for clocks
     config = read_config(args.config_path)
 
-    reading = read_meter(args.image_path, config)
-    keys = sorted(reading.keys(), reverse=True)
-    for k in keys:
-        print(f"x{10**k}: ({reading[k][0]:.4f} ± {reading[k][1]:.4f})")
+    readings = read_meter(args.image_path, config)
+
+    s = np.linspace(0., 1., 50000)
+    llh = loglikelihood(s, readings)
+    i_max = np.argmax(llh)
+    s_max = s[i_max]
+    llh_max = llh[i_max]
+
+    print(f'{args.image_path}, {s_max:.5f}')

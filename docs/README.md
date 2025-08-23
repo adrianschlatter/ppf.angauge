@@ -77,8 +77,9 @@ Project overview
     - read the hands positions including an error bar from these polar
       coordinates
     - corrected for the known rotation of the entire image
-* we had write a little python script to determine the center of gravity of a
-  grayscale image (ImageMagick can't do this, apparently)
+* we had to write a little python script to determine the center of gravity of
+  a grayscale image (ImageMagick can't do this, apparently)
+* UPDATE: We do the image processing in python now, instead of ImageMagick
 * from the 4 hand positions and error bars, we determined the most likely 4
   digit number they are indicating
 * we have adjusted the initial estimate of the image rotation determined from
@@ -92,27 +93,89 @@ Project overview
 
 ### Maximum Likelihood Estimation
 
-This turned out a little more tricky than expected. The problem is the circular
-nature of the clocks. If the hand is between 0 and 1 with an error bar of 0.2,
-there is a decent chance that the hand is actually at 9 - a much higher number
-than 1. But there is zero chance that the hand is on a negative digit (there
-are no negative digits). The probability density "wraps around".
+We use a Baysian approach to determine the most likely watermeter state given
+the observed hand positions and error bars.
+
+Let's say the liter hand reads 1.2. Is this 11.2 liters? Or 21.2? Or 31.2? Of
+course, we have to consider the 10-liter hand. But quite often, the situation
+remains ambiguous. It may be relatively clear (even to the human eye) that it
+must be either 11.2 or 21.2, certainly not 31.2, but that's still two options.
+
+We do the following: First, we plot a horizontal s-axis showing the interval
+[0, s_max[, where s_max is the largest number we can represent with the given
+number of hands. Then, we calculate for each hand:
+
+s_i = (s / 10**i) % 10
+
+i indicating the power of ten of the hand. s_i is what hand i should read if
+the watermeter's state is s. Note that s_i repeats - very often for the smaller
+hands, only once for the largest hand.
+
+Now we can plot the (log-) likelihood f_i(s_i(s)) which is a superpositions of
+combs of Gaussians along s (one comb for each hand).
+
+
+#### The Wrapping Problem
+
+There is still a challenge, though. The problem is the circular nature of the
+clocks. If the hand is between 0 and 1 with an error bar of 0.2, there is a
+decent chance that the hand is actually at 9 - a much higher number than 1. But
+there is zero chance that the hand is on a negative digit (there are no
+negative digits). But a Gaussian centered close to 0 *will* have non-zero
+density below zero. The probability density needs to "wrap around".
 
 This is very annoying because "wrapping" the distribution means adding up all
 the Brillouin zones. This infinite sum poses two problems:
 
 * we don't have infinite time
-* as it is a *sum* and not a *product*, we cannot avoid multiplication of
-  exponentials by simply switching to log-likelihoods
+* as it is a *sum* and not a *product* of (non-logarithmic) densities, we
+  cannot avoid multiplication of exponentials by simply switching to
+  log-likelihoods
 
-We solve this as follows: We note that the error bar is always a lot narrower
+We address this as follows: We note that the error bar is always a lot narrower
 than 360 deg. Therefore, we can reasonably approximate the infinite sum by a
 sum over only the lowest order Brillouin zones. But not to a single one as the
 hand may be near zero, spilling a lot of probability to the neighboring zone.
 
 Next, we *center* the probability distribution at 5: If the estimate is 1.2, we
 remember this but declare 1.2 to be the new 5. Now, the probability densities
-at 0 and at 9.999 become very small, spilling very little probability into
+at 0 and at 9.999... become very small, spilling very little probability into
 neighboring zones. Voila, there is no sum anymore and we can apply the
 log-likelihood trick, thereby avoiding the calculation of exponentials and
 replacing multiplications by additions.
+
+
+#### A Priori Distribution
+
+We know the previous state estimate s_prev, we know that the meter will not run
+backwards, and we know expected increment between two readings. Either because
+we have asked the user at configuration time or because we derive it from past
+readings or both.
+
+Therefore, we use an exponential distribution starting at s_prev (or a little
+before that to account for error bars) with an appropriate expected value as a
+priori distribution P(s):
+
+P(s) = exp(-(s - s_prev) / sigma)
+
+where sigma is the expected increment between two readings.
+
+Now, we face the wrapping problem again: If the previous read was already close
+to the maximum value representable by the number of hands we have, a lot of
+density that "spills" into the "overflow" zone. Also, the range where P(s) = 0
+is somewhat uncomfortable as log(0) = -inf. We avoid both problems by
+restricting the range of s to [s_prev, s_prev + s_max[ (instead of [0, s_max[
+as used in the previous section).
+
+
+#### A Posteriori Distribution
+
+It turns out (RRR) that the a-posteriori distribution is the product of the
+a-priori distribution and the multi-comb of Gaussians we already explained
+above.
+
+
+#### Maximum Likelihood
+
+We now have the density P(s) of the a-posteriori distribution and have to
+identify the (position of its) maximum - efficiently.
