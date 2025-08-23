@@ -1,9 +1,52 @@
-#!/usr/bin/env python
-
 from imageio.v3 import imread
-from matplotlib.colors import rgb_to_hsv
 import numpy as np
 import string
+# from memory_profiler import profile
+
+
+def rgb_to_hsv(rgb):
+    """
+    Convert RGB values to HSV.
+
+    Parameters:
+    rgb : ndarray
+        An array of RGB values with shape (..., 3) and values in [0, 1].
+
+    Returns:
+    ndarray
+        An array of HSV values with the same shape as the input, except
+        the last dimension is still 3 (for H, S, V).
+    """
+    # Extract R, G, B channels
+    r = rgb[..., 0]
+    g = rgb[..., 1]
+    b = rgb[..., 2]
+
+    # Compute maximum and minimum values
+    mx = np.maximum(np.maximum(r, g), b)  # Value (V)
+    mn = np.minimum(np.minimum(r, g), b)
+    delta = mx - mn  # Difference
+
+    # Compute Saturation (S)
+    s = np.where(mx == 0, 0, delta / mx)
+
+    # Compute Hue (H)
+    h = np.zeros_like(r)  # Initialize H array
+
+    # Masks for the cases where R, G, or B is the maximum
+    mask_r = (mx == r) & (delta > 0)
+    mask_g = (mx == g) & (delta > 0)
+    mask_b = (mx == b) & (delta > 0)
+
+    h[mask_r] = (g[mask_r] - b[mask_r]) / delta[mask_r]
+    h[mask_g] = 2.0 + (b[mask_g] - r[mask_g]) / delta[mask_g]
+    h[mask_b] = 4.0 + (r[mask_b] - g[mask_b]) / delta[mask_b]
+
+    h = (h % 6.0) / 6.0  # Scale H to [0, 1]
+
+    # Stack H, S, V into the output array
+    hsv = np.stack([h, s, mx], axis=-1)  # mx is V
+    return hsv
 
 
 def read_config(config_path):
@@ -31,6 +74,7 @@ def read_config(config_path):
     return config
 
 
+# @profile
 def to_handscale(img):
     """
     Convert to grayscale showing bright hand on dark background.
@@ -44,6 +88,7 @@ def to_handscale(img):
     return np.clip((h - 0.71) / (1 - 0.71), 0., 1.)
 
 
+# @profile
 def cog(img):
     """
     Computes the center of gravity of the image.
@@ -63,6 +108,7 @@ def cog(img):
     return c_x - w / 2, h / 2 - c_y
 
 
+# @profile
 def hand2digit(img_hand):
     c_x, c_y = cog(img_hand)
     theta0 = np.arctan2(c_x, c_y)
@@ -91,6 +137,7 @@ def hand2digit(img_hand):
     return (theta0, sigma_theta)
 
 
+# @profile
 def read_meter(image_path, config):
     """
     Reads a meter image and extracts the meter reading.
@@ -156,10 +203,12 @@ def loglikelihood_uncentered(s, readings):
     return p
 
 
+# @profile
 def digit_centered(s, k, readings, offset=0.):
     return (s * 10**-k - readings[k][0] + 5. - offset) % 10 - 5
 
 
+# @profile
 def loglikelihood(s, readings, offset=0.):
     # The likelihood on the circle is the sum of the likelihoods in all
     # "Brillouin" zones of
@@ -179,12 +228,21 @@ def loglikelihood(s, readings, offset=0.):
     return p
 
 
+# @profile
+def numeric_from_readings(readings):
+    s = np.linspace(0., 1., 50000)
+    llh = loglikelihood(s, readings)
+    i_max = np.argmax(llh)
+
+    return s[i_max]
+
+
 if __name__ == "__main__":
     from argparse import ArgumentParser
 
     parser = ArgumentParser(description="Read watermeter image")
-    parser.add_argument("image_path", type=str, help="Path to the meter image")
     parser.add_argument("config_path", type=str, help="Path to config file")
+    parser.add_argument("image_path", type=str, help="Path to the meter image")
     args = parser.parse_args()
 
     # Example configuration for clocks
