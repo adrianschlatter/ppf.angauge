@@ -22,3 +22,7 @@ coverage.lcov
 
 # experimental code
 experimental/
+
+# extended (local) test data
+tests/data/2025-08-20T*.jpg
+tests/data/2025-08-20T*.bmp

@@ -1,7 +1,38 @@
-from imageio.v3 import imread
 import numpy as np
 import string
 # from memory_profiler import profile
+import mmap
+import struct
+
+
+def read_bmp_rectangle(file_path, x, y, w, h):
+    """
+    Returns memory-mapped array of rectangle (x,y,w,h) of BMP file.
+    """
+    with open(file_path, 'rb') as f:
+        with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mm:
+            file_header = struct.unpack('<2sIHHI', mm[0:14])
+            offset = file_header[4]
+            dib_header = struct.unpack('<IiiHH', mm[14:14+16])
+            img_width = dib_header[1]
+            img_height = dib_header[2]
+            bits_per_pixel = dib_header[4]
+
+            if bits_per_pixel != 24:
+                raise ValueError("Only 24-bit BMP supported")
+
+            if x < 0 or y < 0 or x + w > img_width or y + h > img_height:
+                raise ValueError("Rectangle out of bounds")
+
+            row_size = ((img_width * 3 + 3) // 4) * 4  # row size with padding
+            image_mm = np.memmap(
+                            file_path, dtype=np.uint8, mode='r', offset=offset,
+                            shape=(img_height, row_size))
+            sub_mm = image_mm[img_height - y - h:img_height - y,
+                              x * 3:(x + w) * 3]
+            rgb_mm = sub_mm.reshape(h, w, 3)[::-1, :, ::-1]
+
+            return rgb_mm
 
 
 def rgb_to_hsv(rgb):
@@ -148,13 +179,10 @@ def read_meter(image_path, config):
     Returns:
         str: Extracted meter reading.
     """
-    # Read the image
-    img_full = imread(image_path)
-
     reading = {}
     for clock_exponent, cfg in config.items():
-        img_clock = img_full[cfg['y0']:cfg['y0'] + cfg['w'],
-                             cfg['x0']:cfg['x0'] + cfg['w']]
+        img_clock = read_bmp_rectangle(
+                        image_path, cfg['x0'], cfg['y0'], cfg['w'], cfg['w'])
         img_hand = to_handscale(img_clock)
         theta, dtheta = hand2digit(img_hand)
         # compensate known rotation of clock:
