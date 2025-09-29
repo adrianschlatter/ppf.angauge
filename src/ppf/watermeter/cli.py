@@ -3,8 +3,7 @@
 """
 
 from argparse import ArgumentParser
-from ppf.watermeter import read_meter, read_config, loglikelihood
-import numpy as np
+from ppf.watermeter import read_meter, read_config, mle
 
 
 def main():
@@ -15,12 +14,15 @@ def main():
     args = parser.parse_args()
 
     config = read_config(args.config_path)
-    s = np.linspace(0., 1., 50000)
 
     for img_path in args.image_path:
-        readings = read_meter(img_path, config)
-        llh = loglikelihood(s, readings)
-        i_max = np.argmax(llh)
-        s_max = s[i_max]
+        try:
+            readings = read_meter(img_path, config)
+        except ValueError:
+            print(f'{img_path}, nan')
+            continue
 
-        print(f'{img_path}, {s_max:.5f}')
+        # Find maximum likelihood watermeter state given the readings:
+        s_ml, y_ml = mle(readings)
+
+        print(f'{img_path}, {s_ml:.5f}')

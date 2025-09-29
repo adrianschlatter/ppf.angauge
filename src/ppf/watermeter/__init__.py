@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-ppf.wateremeter
+ppf.watermeter
 ++++++++++++++++
 
 Convert images of watermeters to numerical readings.
@@ -16,5 +16,11 @@ __version__ = version(__name__)
 
 # import every function, class, etc. that should be visible in the package
 from .watermeter import *
+from .bayes import *
+from .image_processing import *
+from .io import *
 
 del watermeter
+del bayes
+del image_processing
+del io

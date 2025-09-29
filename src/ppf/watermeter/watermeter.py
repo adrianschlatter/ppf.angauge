@@ -1,152 +1,48 @@
 import numpy as np
-import string
-# from memory_profiler import profile
-import mmap
-import struct
+from typing import Tuple
+from .image_processing import read_bmp_rectangle, to_handscale, cog
 
 
-def read_bmp_rectangle(file_path, x, y, w, h):
+def hand2digit(img_hand) -> Tuple[float, float]:
     """
-    Returns memory-mapped array of rectangle (x,y,w,h) of BMP file.
+    Convert image of indicator to digit and its uncertainty.
+
+    Parameters
+    ----------
+
+    img_hand :
+        2D numpy array
+        Image of the hand in grayscale (bright hand on dark background).
+
+    Returns
+    -------
+
+    mu_theta : float
+        Estimated angle of the indicator as a digit [0, 10[.
+
+    sigma_theta : float
+        Estimated standard deviation of the angle in digit units [0, 10[.
+
+    Raises
+    ------
+
+    ValueError :
+        If the center of gravity cannot be computed or if there is a division
+        by zero during the calculation of the standard deviation. Both happen
+        if the input image is (almost) completely black (no indicator
+        detected).
     """
-    with open(file_path, 'rb') as f:
-        with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mm:
-            file_header = struct.unpack('<2sIHHI', mm[0:14])
-            offset = file_header[4]
-            dib_header = struct.unpack('<IiiHH', mm[14:14+16])
-            img_width = dib_header[1]
-            img_height = dib_header[2]
-            bits_per_pixel = dib_header[4]
 
-            if bits_per_pixel != 24:
-                raise ValueError("Only 24-bit BMP supported")
+    try:
+        c_x, c_y = cog(img_hand)
+    except ValueError:
+        raise ValueError("Failed to compute center of gravity of hand image")
 
-            if x < 0 or y < 0 or x + w > img_width or y + h > img_height:
-                raise ValueError("Rectangle out of bounds")
-
-            row_size = ((img_width * 3 + 3) // 4) * 4  # row size with padding
-            image_mm = np.memmap(
-                            file_path, dtype=np.uint8, mode='r', offset=offset,
-                            shape=(img_height, row_size))
-            sub_mm = image_mm[img_height - y - h:img_height - y,
-                              x * 3:(x + w) * 3]
-            rgb_mm = sub_mm.reshape(h, w, 3)[::-1, :, ::-1]
-
-            return rgb_mm
-
-
-def rgb_to_hsv(rgb):
-    """
-    Convert RGB values to HSV.
-
-    Parameters:
-    rgb : ndarray
-        An array of RGB values with shape (..., 3) and values in [0, 1].
-
-    Returns:
-    ndarray
-        An array of HSV values with the same shape as the input, except
-        the last dimension is still 3 (for H, S, V).
-    """
-    # Extract R, G, B channels
-    r = rgb[..., 0]
-    g = rgb[..., 1]
-    b = rgb[..., 2]
-
-    # Compute maximum and minimum values
-    mx = np.maximum(np.maximum(r, g), b)  # Value (V)
-    mn = np.minimum(np.minimum(r, g), b)
-    delta = mx - mn  # Difference
-
-    # Compute Saturation (S)
-    s = np.where(mx == 0, 0, delta / mx)
-
-    # Compute Hue (H)
-    h = np.zeros_like(r)  # Initialize H array
-
-    # Masks for the cases where R, G, or B is the maximum
-    mask_r = (mx == r) & (delta > 0)
-    mask_g = (mx == g) & (delta > 0)
-    mask_b = (mx == b) & (delta > 0)
-
-    h[mask_r] = (g[mask_r] - b[mask_r]) / delta[mask_r]
-    h[mask_g] = 2.0 + (b[mask_g] - r[mask_g]) / delta[mask_g]
-    h[mask_b] = 4.0 + (r[mask_b] - g[mask_b]) / delta[mask_b]
-
-    h = (h % 6.0) / 6.0  # Scale H to [0, 1]
-
-    # Stack H, S, V into the output array
-    hsv = np.stack([h, s, mx], axis=-1)  # mx is V
-    return hsv
-
-
-def read_config(config_path):
-    """
-    Reads the configuration file for clock positions.
-
-    Args:
-        config_path (str): Path to the configuration file.
-
-    Returns:
-        dict: Configuration dictionary with clock names and their parameters.
-    """
-    config = {}
-    with open(config_path, 'r') as f:
-        for line in f:
-            if line.strip() and not line.startswith('#'):
-                parts = line.strip().split()
-                clockname = parts[0]
-                clock_exponent = round(np.log10(float(clockname[1:])))
-                x0, y0, w = map(int, parts[1:4])
-                phi = float(parts[4])
-                config[clock_exponent] = {'x0': x0, 'y0': y0, 'w': w,
-                                          'phi': phi}
-
-    return config
-
-
-# @profile
-def to_handscale(img):
-    """
-    Convert to grayscale showing bright hand on dark background.
-
-    Args:
-        img (numpy.ndarray): The input image.
-    Returns:
-        numpy.ndarray: The processed image in hand scale.
-    """
-    h = rgb_to_hsv(img / 255.)[:, :, 0]
-    return np.clip((h - 0.71) / (1 - 0.71), 0., 1.)
-
-
-# @profile
-def cog(img):
-    """
-    Computes the center of gravity of the image.
-
-    Args:
-        img (numpy.ndarray): The input image.
-
-    Returns:
-        tuple: The x and y coordinates of the center of gravity.
-    """
-    h, w = img.shape[:2]
-    x = np.arange(w)
-    y = np.arange(h)
-    X, Y = np.meshgrid(x, y, indexing='xy')
-    c_x = np.sum(X * img) / np.sum(img)
-    c_y = np.sum(Y * img) / np.sum(img)
-    return c_x - w / 2, h / 2 - c_y
-
-
-# @profile
-def hand2digit(img_hand):
-    c_x, c_y = cog(img_hand)
-    theta0 = np.arctan2(c_x, c_y)
+    mu_theta = np.arctan2(c_x, c_y)
     r_max = min(img_hand.shape) / 2.
     r_min = 14/40 * r_max
     r = np.linspace(r_min, r_max, img_hand.shape[0])
-    theta = np.linspace(theta0 - np.pi / 2, theta0 + np.pi / 2,
+    theta = np.linspace(mu_theta - np.pi / 2, mu_theta + np.pi / 2,
                         img_hand.shape[1])
     X = r[:, None] * np.sin(theta[None, :]) + img_hand.shape[1] / 2
     Y = img_hand.shape[0] / 2 - r[:, None] * np.cos(theta[None, :])
@@ -157,18 +53,20 @@ def hand2digit(img_hand):
     c_theta *= np.pi / len(theta)
 
     # update estimate of hand angle:
-    theta0 += c_theta
+    mu_theta += c_theta
 
     # get the std dev in angle
     dtheta = theta - c_theta
     theta_polar = img_polar.sum(axis=0)
-    sigma_theta = np.sqrt((dtheta**2 * theta_polar).sum() / theta_polar.sum())
+    theta_polar_sum = theta_polar.sum()
+    if theta_polar_sum == 0:
+        raise ValueError("theta_polar.sum() is zero!")
+    sigma_theta = np.sqrt((dtheta**2 * theta_polar).sum() / theta_polar_sum)
     sigma_theta = np.pi / len(theta)
 
-    return (theta0, sigma_theta)
+    return (mu_theta, sigma_theta)
 
 
-# @profile
 def read_meter(image_path, config):
     """
     Reads a meter image and extracts the meter reading.
@@ -184,7 +82,12 @@ def read_meter(image_path, config):
         img_clock = read_bmp_rectangle(
                         image_path, cfg['x0'], cfg['y0'], cfg['w'], cfg['w'])
         img_hand = to_handscale(img_clock)
-        theta, dtheta = hand2digit(img_hand)
+        try:
+            theta, dtheta = hand2digit(img_hand)
+        except ValueError:
+            raise ValueError(
+                    f"Failed to read clock {clock_exponent}"
+                    f"in image {image_path}")
         # compensate known rotation of clock:
         theta += cfg['phi'] / 180. * np.pi
         # convert to digit:
@@ -194,94 +97,14 @@ def read_meter(image_path, config):
 
         reading[clock_exponent] = (digit, ddigit)
 
-    # return reading as number
-    return reading
+    # convert to numpy recarray:
+    dt = np.dtype([('pow', 'i4'), ('value', 'f4'), ('sigma', 'f4')])
+    rec_array = np.recarray((len(reading),), dtype=dt)
+    lst = []
+    for pow, (mu, sigma) in reading.items():
+        lst.append((pow, mu, sigma))
+    lst.sort(reverse=True)  # sort by pow
+    for i, (pow, mu, sigma) in enumerate(lst):
+        rec_array[i] = (pow, mu, sigma)
 
-
-def read_readings(filename):
-    """Read the readings from a file."""
-
-    readings = {}
-    with open(filename, 'r') as f:
-        for line in f:
-            name, rest = line.split(':')
-            # in rest, remove anything not a number or dot or space:
-            to_remove = list(string.punctuation)
-            to_remove.remove('.')
-            to_remove.append('±')
-            rest = rest.translate(str.maketrans('', '', ''.join(to_remove)))
-            mu = float(rest.split()[0])
-            sigma = float(rest.split()[1])
-            exponent = round(np.log10(float(name[1:])))
-            readings[exponent] = (mu, sigma)
-
-    return readings
-
-
-def digit(n, s):
-    return (10**-n * s) % 10
-
-
-def loglikelihood_uncentered(s, readings):
-    p = 0.
-    for n in readings.keys():
-        sigma2 = readings[n][1]**2
-        p += -0.5 * np.log(2 * np.pi * sigma2) \
-             - ((digit(n, s) - readings[n][0])**2 / (2 * sigma2))
-    return p
-
-
-# @profile
-def digit_centered(s, k, readings, offset=0.):
-    return (s * 10**-k - readings[k][0] + 5. - offset) % 10 - 5
-
-
-# @profile
-def loglikelihood(s, readings, offset=0.):
-    # The likelihood on the circle is the sum of the likelihoods in all
-    # "Brillouin" zones of
-    # the unwrapped likelihood. Wrapping means calculating an infinite sum over
-    # these zones. I don't want sums (bad for logarithms), and I don't want an
-    # infinite number of terms.
-    # Assumption: The normal distribution is much narrower than 1 Brillouin
-    # zone => we have to sum only a few zones.
-    # Trick: We center the first Brillouin zone on the maximum of the normal
-    # distribution => no summing, just crop to the first Brillouin zone.
-    # This centering is done by digit_centered().
-    p = 0.
-    for n in readings.keys():
-        sigma2 = readings[n][1]**2
-        p += -0.5 * np.log(2 * np.pi * sigma2) \
-             - digit_centered(s, n, readings, offset=offset)**2 / (2 * sigma2)
-    return p
-
-
-# @profile
-def numeric_from_readings(readings):
-    s = np.linspace(0., 1., 50000)
-    llh = loglikelihood(s, readings)
-    i_max = np.argmax(llh)
-
-    return s[i_max]
-
-
-if __name__ == "__main__":
-    from argparse import ArgumentParser
-
-    parser = ArgumentParser(description="Read watermeter image")
-    parser.add_argument("config_path", type=str, help="Path to config file")
-    parser.add_argument("image_path", type=str, help="Path to the meter image")
-    args = parser.parse_args()
-
-    # Example configuration for clocks
-    config = read_config(args.config_path)
-
-    readings = read_meter(args.image_path, config)
-
-    s = np.linspace(0., 1., 50000)
-    llh = loglikelihood(s, readings)
-    i_max = np.argmax(llh)
-    s_max = s[i_max]
-    llh_max = llh[i_max]
-
-    print(f'{args.image_path}, {s_max:.5f}')
+    return rec_array

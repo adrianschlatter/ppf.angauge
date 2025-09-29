@@ -1,5 +1,116 @@
 # README
 
+ppf.watermeter reads your analog watermeter from a photo. The package provides
+python code to use in your own scripts as well as a command line tool
+`read_meter` if you don't feel like programming.
+
+
+## Usage
+
+```shell
+read_meter --s_prev 5114.4425 --ds_mean 0.0026 config.tsv <image.bmp>
+```
+
+where config.tsv is a configuration file specifying where the hands are,
+`--s_prev` specifies the previous reading of the watermeter, and `--ds_mean`
+specifies the expected increment between two readings. If these arguments are
+not provided, `read_meter` will still read the image but will not use a priori
+knowledge to improve the reading. Also, it will assume that the non-analog
+digits (the rotating number-wheels) show zero.
+
+
+## Configuration
+
+`read_meter` needs a bit of configuration to know where the hands are located
+and how they are oriented in the image. Also, we have to tell it how to best
+process the image to separate hands from background.
+
+![example photo](./assets/indicator_config.jpg)
+
+The configuration file corresponding to the above image is shown below. It has
+one row for every hand to be read. The columns provide:
+
+* x0: column number of upper left corner of the clock square
+* y0: row number of upper left corner of the clock square (row 0 is top row)
+* w : width (and height) of the clock square
+* phi: rotate by this angle (clockwise, degrees) to make digit 0 point upwards
+
+
+```csv
+#clock	x0	y0	w	phi
+x0.0001	265	148	83	-74.4
+x0.001	235	228	81	-74.4
+x0.01	258	310	80	-74.4
+x0.1	327	359	80	-74.4
+```
+
+There is *no* configuration for the non-analog digit indicators.
+`ppf.watermeter` will not *read* these. Instead, it will *track* them. Every
+time an overflow of the analog digits is detected (x0.1 m^3 hand in the example
+image has completed a full turn), the value of the next higher digit (x1 m^3 in
+the example) increments.
+
+
+## Installation
+
+```shell
+pip install ppf.watermeter
+```
+
+
+## How it works
+
+### Cropping
+
+`read_meter` reads the pink squares from the image, only, avoiding
+unnecessary memory consumption. The cropped reading uses `x0`, `y0`, and `w`
+from the configuration file.
+
+
+### Color processing
+
+First, `ppf.watermeter` converts the RGB image to HSV color space, using only
+the Hue channel (H). There, it selects the typical red color of the hands to
+obtain a grayscale image where the hands are white on a black background.
+
+Currently, the hue range is hard-coded. Future versions of `ppf.watermeter` may
+change this to a configuration parameter.
+
+
+### Polar coordinates
+
+Next, `ppf.watermeter` converts the cropped grayscale image to polar
+coordinates and determines the angle of the center of gravity as well as the
+width of the hand. The width is used as an indicator of uncertainty. Also, we
+use `phi` from the configuration file to correct for the rotation of the image,
+and we convert the angle to a digit in [0, 10[.
+
+Now, we have information similar to this:
+
+```
+x0.1: (4.3649 ± 0.0625)
+x0.01: (4.9275 ± 0.0625)
+x0.001: (2.8150 ± 0.0617)
+x0.0001: (3.4867 ± 0.0602)
+```
+
+
+### Maximum likelihood estimation
+
+We use a Bayesian approach to determine the most likely watermeter state given
+the observed hand positions and error bars. If hand x0.1 reads 4.36 this does
+not only indicate that this digit is likely to be 4, but also that the next
+lower digit (x0.1) is likely to be near 3.6.
+
+If the previous reading is provided as an argument, we will also use this as
+follows: We know that the watermeter cannot run backwards, and we know the
+expected increment between two readings. We further assume an exponential
+distribution starting at the previous reading with an appropriate expected
+value as a priori distribution.
+
+Combining this knowledge we determine the most likely watermeter state.
+
+
 ## Project goals
 
 * connect analog watermeters to homeassistant
