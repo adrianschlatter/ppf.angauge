@@ -10,19 +10,18 @@ def read_config(config_path):
         config_path (str): Path to the configuration file.
 
     Returns:
-        dict: Configuration dictionary with clock names and their parameters.
+        list of dict: A list of dictionaries, each containing the keys 'x0',
+        'y0', 'w', and 'phi'. Index in list is the clock index: Lowest-value
+        clock is index 0, next is index 1, etc.
     """
-    config = {}
+    config = []
     with open(config_path, 'r') as f:
         for line in f:
             if line.strip() and not line.startswith('#'):
                 parts = line.strip().split()
-                clockname = parts[0]
-                clock_exponent = round(np.log10(float(clockname[1:])))
-                x0, y0, w = map(int, parts[1:4])
-                phi = float(parts[4])
-                config[clock_exponent] = {'x0': x0, 'y0': y0, 'w': w,
-                                          'phi': phi}
+                x0, y0, w = map(int, parts[:3])
+                phi = float(parts[3])
+                config.append({'x0': x0, 'y0': y0, 'w': w, 'phi': phi})
 
     return config
 
