@@ -13,10 +13,11 @@ def loglikelihood(s, readings, offset=0.):
     # distribution => no summing, just crop to the first Brillouin zone.
     # This centering is done by digit_centered().
     p = 0.
-    for n in readings.keys():
-        sigma2 = readings[n][1]**2
+    for n, reading in enumerate(readings):
+        sigma2 = reading['sigma']**2
+        bmi = brillouin_zone(s, readings)
         p += -0.5 * np.log(2 * np.pi * sigma2) \
-             - digit_centered(s, n, readings, offset=offset)**2 / (2 * sigma2)
+             - digit_centered(s, n, readings, bmi, offset=offset)**2 / (2 * sigma2)
     return p
 
 
@@ -35,45 +36,47 @@ def brillouin_zone(s, readings):
     # s * 10**-k - readings[k][0] - m_k * 10 is in [-5, 5]
     # in other words: To replace the modulo in wm.digit_centered() by a
     # subtraction of an integer multiple of 10.
-    # ks = list(readings.keys())
-    # ms = {k: int((s * 10**-k - readings[k][0] + 5.) // 10) for k in ks}
-
-    ik = ((s * 10.**-readings['pow'] -
-          readings['value'] + 5.) // 10).astype(int)
-    return {pow: i for pow, i in zip(readings['pow'], ik)}
+    return np.array([(s * 10.**-i - r['value'] + 5.) // 10
+                     for i, r in enumerate(readings)])
 
 
 def digit_centered(s, k, readings, bmi, offset=0):
     # the digit_centered function that accepts known brillouin zones
     # instead of using a modulo operation as does wm.digit_centered()
-    return s * 10**-k - readings[k][0] - bmi[k] * 10
+    return s * 10**-k - readings[k]['value'] - bmi[k] * 10
 
 
 def ymax_brillouin_zone(readings, bmi):
-    assert set(readings['pow']) == set(bmi.keys())
+    assert len(readings) == len(bmi)
 
-    m_k = np.array(list(bmi.values()))
-    t = 10.**-readings['pow']
-    W = np.diag(1 / readings['sigma']**2)
-    b = (readings['value'] + 10 * m_k)
-    C = np.log(2 * np.pi * readings['sigma']**2).sum()
+    values = np.array([r['value'] for r in readings])
+    sigmas = np.array([r['sigma'] for r in readings])
+
+    m_k = bmi
+    t = 10.**-np.arange(len(readings))
+    W = np.diag(1 / sigmas**2)
+    b = (values + 10 * m_k)
+    C = np.log(2 * np.pi * sigmas**2).sum()
 
     return -0.5 * (C + b.T @ W @ b - (t.T @ W @ b)**2 / (t.T @ W @ t))
 
 
 def smax_brillouin_zone(readings, bmi):
-    assert set(readings['pow']) == set(bmi.keys())
+    assert len(readings) == len(bmi)
 
-    m_k = np.array(list(bmi.values()))
-    t = 10.**-readings['pow']
-    W = np.diag(1 / readings['sigma']**2)
-    b = (readings['value'] + 10 * m_k)
+    values = np.array([r['value'] for r in readings])
+    sigmas = np.array([r['sigma'] for r in readings])
+
+    m_k = bmi
+    t = 10.**-np.arange(len(readings))
+    W = np.diag(1 / sigmas**2)
+    b = (values + 10 * m_k)
 
     return (t.T @ W @ b) / (t.T @ W @ t)
 
 
 def initial_guess(readings):
-    return sum(10.**readings['pow'] * np.round(readings['value']))
+    return sum([10.**i * r['value'] for i, r in enumerate(readings)])
 
 
 def numeric_from_readings(readings):
@@ -98,7 +101,7 @@ def mle(readings):
         Returns True if a better neighbor was found, False otherwise.
         """
         nonlocal bmi_0, y_max, s_max
-        for k in readings['pow'][1:]:
+        for k in range(len(readings)):
             for delta in [-1, 1]:
                 # shift s up or down so that reading[k] stays the same:
                 s_shifted = s_max + delta * 10.**(k + 1)
@@ -119,6 +122,6 @@ def mle(readings):
     # sometimes, we slip below zero if s is close to zero and the narrowest
     # Brillouin zone is cut at zero and has its maximum below zero.
     # We want the result to be within the largest Brillouin zone:
-    s_max = s_max % (10**(max(readings['pow']) + 1))
+    s_max = s_max % (10**len(readings))
 
     return s_max, y_max

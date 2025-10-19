@@ -11,6 +11,10 @@ def main():
     parser.add_argument("config_path", type=str, help="Path to config file")
     parser.add_argument("image_path", type=str, nargs='+',
                         help="Path to the meter image")
+    parser.add_argument("--multiplier", type=float, default=0.0001,
+                        help="Multiplier of finest indicator (e.g. 0.0001)")
+    parser.add_argument("--hands", action="store_true",
+                        help="print hand readings")
     args = parser.parse_args()
 
     config = read_config(args.config_path)
@@ -25,4 +29,11 @@ def main():
         # Find maximum likelihood watermeter state given the readings:
         s_ml, y_ml = mle(readings)
 
-        print(f'{img_path}, {s_ml:.5f}')
+        # Apply units
+        s_ml *= args.multiplier
+
+        if args.hands:
+            hand_readings = ', '.join([f'{r["value"]:.2f}' for r in readings])
+            print(f'{img_path}, {s_ml:.5f}, {hand_readings}')
+        else:
+            print(f'{img_path}, {s_ml:.5f}')

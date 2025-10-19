@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Tuple
+from typing import Tuple, List, Dict
 from .image_processing import read_bmp_rectangle, to_handscale, cog
 
 
@@ -18,10 +18,10 @@ def hand2digit(img_hand) -> Tuple[float, float]:
     -------
 
     mu_theta : float
-        Estimated angle of the indicator as a digit [0, 10[.
+        Estimated angle of the indicator in radians [0, 2*pi[.
 
     sigma_theta : float
-        Estimated standard deviation of the angle in digit units [0, 10[.
+        Estimated standard deviation of the angle in radians [0, 2*pi[.
 
     Raises
     ------
@@ -67,18 +67,29 @@ def hand2digit(img_hand) -> Tuple[float, float]:
     return (mu_theta, sigma_theta)
 
 
-def read_meter(image_path, config):
+def read_meter(image_path: str, config: List[Dict]) -> List[Dict]:
     """
-    Reads a meter image and extracts the meter reading.
+    Read meter image and extract reading of each indicator.
 
-    Args:
-        image_path (str): Path to the image file.
+    Parameters
+    ----------
 
-    Returns:
-        str: Extracted meter reading.
+    image_path : str
+        path of image to read (.bmp file format)
+
+    config : List[Dict]
+        Configuration for clock positions, as returned by read_config().
+
+    Returns
+    -------
+
+    list of dict:
+        List of dictionaries, each containing 'mu' and 'sigma'
+        for each clock in the meter. 'mu' is the estimated digit value, 'sigma'
+        is the estimated uncertainty.
     """
-    reading = {}
-    for clock_exponent, cfg in config.items():
+    reading = []
+    for i, cfg in enumerate(config):
         img_clock = read_bmp_rectangle(
                         image_path, cfg['x0'], cfg['y0'], cfg['w'], cfg['w'])
         img_hand = to_handscale(img_clock)
@@ -86,8 +97,7 @@ def read_meter(image_path, config):
             theta, dtheta = hand2digit(img_hand)
         except ValueError:
             raise ValueError(
-                    f"Failed to read clock {clock_exponent}"
-                    f"in image {image_path}")
+                    f"Failed to read clock {i}" f"in image {image_path}")
         # compensate known rotation of clock:
         theta += cfg['phi'] / 180. * np.pi
         # convert to digit:
@@ -95,16 +105,6 @@ def read_meter(image_path, config):
         ddigit = dtheta / 2 / np.pi * 10
         digit = digit % 10
 
-        reading[clock_exponent] = (digit, ddigit)
+        reading.append({'value': digit, 'sigma': ddigit})
 
-    # convert to numpy recarray:
-    dt = np.dtype([('pow', 'i4'), ('value', 'f4'), ('sigma', 'f4')])
-    rec_array = np.recarray((len(reading),), dtype=dt)
-    lst = []
-    for pow, (mu, sigma) in reading.items():
-        lst.append((pow, mu, sigma))
-    lst.sort(reverse=True)  # sort by pow
-    for i, (pow, mu, sigma) in enumerate(lst):
-        rec_array[i] = (pow, mu, sigma)
-
-    return rec_array
+    return reading
