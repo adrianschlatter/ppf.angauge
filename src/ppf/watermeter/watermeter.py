@@ -1,9 +1,8 @@
 import numpy as np
-from typing import Tuple, List, Dict
 from .image_processing import read_bmp_rectangle, to_handscale, cog
 
 
-def hand2digit(img_hand) -> Tuple[float, float]:
+def hand2digit(img_hand: np.ndarray) -> tuple[float, float]:
     """
     Convert image of indicator to digit and its uncertainty.
 
@@ -67,7 +66,7 @@ def hand2digit(img_hand) -> Tuple[float, float]:
     return (mu_theta, sigma_theta)
 
 
-def read_meter(image_path: str, config: List[Dict]) -> List[Dict]:
+def read_meter(image_path: str, config: list[dict]) -> list[dict]:
     """
     Read meter image and extract reading of each indicator.
 

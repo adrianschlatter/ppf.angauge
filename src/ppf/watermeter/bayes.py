@@ -1,7 +1,8 @@
 import numpy as np
 
 
-def loglikelihood(s, readings, offset=0.):
+def loglikelihood(s: np.ndarray,
+                  readings: list[dict], offset: float = 0.) -> np.ndarray:
     # The likelihood on the circle is the sum of the likelihoods in all
     # "Brillouin" zones of
     # the unwrapped likelihood. Wrapping means calculating an infinite sum over
@@ -17,21 +18,12 @@ def loglikelihood(s, readings, offset=0.):
         sigma2 = reading['sigma']**2
         bmi = brillouin_zone(s, readings)
         p += -0.5 * np.log(2 * np.pi * sigma2) \
-             - digit_centered(s, n, readings, bmi, offset=offset)**2 / (2 * sigma2)
+             - digit_centered(s, n, readings, bmi,
+                              offset=offset)**2 / (2 * sigma2)
     return p
 
 
-# If you want the maximum value as well:
-def max_loglikelihood(s, readings, offset=0.0):
-    p = 0.0
-    for n in readings.keys():
-        sigma2 = readings[n][1] ** 2
-        dc = ((s * 10.0**(-n) - readings[n][0] + 5.0 - offset) % 10.0) - 5.0
-        p += -0.5 * np.log(2 * np.pi * sigma2) - (dc * dc) / (2 * sigma2)
-    return p
-
-
-def brillouin_zone(s, readings):
+def brillouin_zone(s: np.ndarray, readings: list[dict]) -> np.ndarray:
     # returns the integers m_k so that:
     # s * 10**-k - readings[k][0] - m_k * 10 is in [-5, 5]
     # in other words: To replace the modulo in wm.digit_centered() by a
@@ -40,13 +32,14 @@ def brillouin_zone(s, readings):
                      for i, r in enumerate(readings)])
 
 
-def digit_centered(s, k, readings, bmi, offset=0):
+def digit_centered(s: np.ndarray, k: int, readings: list[dict],
+                   bmi: np.ndarray, offset=0) -> np.ndarray:
     # the digit_centered function that accepts known brillouin zones
     # instead of using a modulo operation as does wm.digit_centered()
     return s * 10**-k - readings[k]['value'] - bmi[k] * 10
 
 
-def ymax_brillouin_zone(readings, bmi):
+def ymax_brillouin_zone(readings: list[dict], bmi: np.ndarray) -> float:
     assert len(readings) == len(bmi)
 
     values = np.array([r['value'] for r in readings])
@@ -61,7 +54,7 @@ def ymax_brillouin_zone(readings, bmi):
     return -0.5 * (C + b.T @ W @ b - (t.T @ W @ b)**2 / (t.T @ W @ t))
 
 
-def smax_brillouin_zone(readings, bmi):
+def smax_brillouin_zone(readings: list[dict], bmi: np.ndarray) -> float:
     assert len(readings) == len(bmi)
 
     values = np.array([r['value'] for r in readings])
@@ -75,19 +68,11 @@ def smax_brillouin_zone(readings, bmi):
     return (t.T @ W @ b) / (t.T @ W @ t)
 
 
-def initial_guess(readings):
+def initial_guess(readings: list[dict]) -> float:
     return sum([10.**i * r['value'] for i, r in enumerate(readings)])
 
 
-def numeric_from_readings(readings):
-    s = np.linspace(0., 1., 50000)
-    llh = loglikelihood(s, readings)
-    i_max = np.argmax(llh)
-
-    return s[i_max]
-
-
-def mle(readings):
+def mle(readings: list[dict]) -> (float, float):
     """Maximum likelihood of density function defined by readings."""
 
     s_max = initial_guess(readings)

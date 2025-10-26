@@ -3,7 +3,8 @@ import struct
 import numpy as np
 
 
-def read_bmp_rectangle(file_path, x, y, w, h):
+def read_bmp_rectangle(file_path: str,
+                       x: int, y: int, w: int, h: int) -> np.memmap:
     """
     Returns memory-mapped array of rectangle (x,y,w,h) of BMP file.
     """
@@ -33,7 +34,7 @@ def read_bmp_rectangle(file_path, x, y, w, h):
             return rgb_mm
 
 
-def rgb_to_hsv(rgb):
+def rgb_to_hsv(rgb: np.ndarray) -> np.ndarray:
     """
     Convert RGB values to HSV.
 
@@ -75,10 +76,11 @@ def rgb_to_hsv(rgb):
 
     # Stack H, S, V into the output array
     hsv = np.stack([h, s, mx], axis=-1)  # mx is V
+
     return hsv
 
 
-def to_handscale(img):
+def to_handscale(img: np.ndarray) -> np.ndarray:
     """
     Convert to grayscale showing bright hand on dark background.
 
@@ -88,10 +90,11 @@ def to_handscale(img):
         numpy.ndarray: The processed image in hand scale.
     """
     h = rgb_to_hsv(img / 255.)[:, :, 0]
+
     return np.clip((h - 0.71) / (1 - 0.71), 0., 1.)
 
 
-def cog(img):
+def cog(img: np.ndarray) -> tuple[float, float]:
     """
     Computes the center of gravity of the image.
 
@@ -113,4 +116,5 @@ def cog(img):
         raise ValueError("img.sum() is zero!")
     c_x = np.sum(X * img) / imsum
     c_y = np.sum(Y * img) / imsum
+
     return c_x - w / 2, h / 2 - c_y

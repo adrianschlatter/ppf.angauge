@@ -1,4 +1,4 @@
-def read_config(config_path):
+def read_config(config_path: str) -> list[dict]:
     """
     Reads the configuration file for clock positions.
 
