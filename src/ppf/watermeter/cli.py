@@ -34,6 +34,7 @@ def main():
 
         if args.hands:
             hand_readings = ', '.join([f'{r["value"]:.2f}' for r in readings])
-            print(f'{img_path}, {s_ml:.5f}, {hand_readings}')
+            sigmas = ', '.join([f'{r["sigma"]:.3f}' for r in readings])
+            print(f'{img_path}, {s_ml:.5f}, {hand_readings}, {sigmas}')
         else:
             print(f'{img_path}, {s_ml:.5f}')
