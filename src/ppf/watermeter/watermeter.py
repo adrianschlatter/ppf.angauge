@@ -100,6 +100,11 @@ def read_meter(image_path: str, config: List[Dict]) -> List[Dict]:
                     f"Failed to read clock {i}" f"in image {image_path}")
         # compensate known rotation of clock:
         theta += cfg['phi'] / 180. * np.pi
+
+        # compensate elliptical distortion:
+        theta += cfg['Asin'] * np.sin(theta)
+        theta += cfg['Acos'] * np.cos(theta)
+
         # convert to digit:
         digit = theta / 2 / np.pi * 10
         ddigit = dtheta / 2 / np.pi * 10

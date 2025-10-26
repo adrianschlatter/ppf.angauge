@@ -16,7 +16,8 @@ def read_config(config_path):
             if line.strip() and not line.startswith('#'):
                 parts = line.strip().split()
                 x0, y0, w = map(int, parts[:3])
-                phi = float(parts[3])
-                config.append({'x0': x0, 'y0': y0, 'w': w, 'phi': phi})
+                phi, Asin, Acos = map(float, parts[3:6])
+                config.append({'x0': x0, 'y0': y0, 'w': w, 'phi': phi,
+                               'Asin': Asin, 'Acos': Acos})
 
     return config
