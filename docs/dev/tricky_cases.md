@@ -87,3 +87,47 @@ does not yet look perfect, although better than before. I have looked at some
 of the (many) outliers, and they seem to be reading errors: The tens hand is
 sometimes close to 180 degrees off from where it should be. Image processing
 problem?
+
+
+## Theta Wrapping
+
+One problem leading to the "tens hand" reading errors mentioned above is
+related to the wrapping of angles at 0/360 degrees in polar coordinates: If the
+hand is close to 0 degrees, a part of it will show near 360 degrees. Taking the
+average of those angles will result in an estimate close to 180 degrees, which
+is very wrong.
+
+However, we already anticipated this problem and first estimate the center of
+gravity of the hand in cartesian coordinates. Then we use this for an initial
+estimate of the hand's angle and do the polar transform *centered* on this
+angle. This should avoid the wrapping problem except in cases where our initial
+estimate is very wrong.
+
+Well, look at this:
+
+![](../assets/uncentered_dial.jpg)
+
+The tens hand wraps in polar coordinates. This happens because:
+
+* the centering of the crop is not perfect. The actual center of rotation is
+  significantly left of the crop center. This shifts the center of gravity of
+  the cartesian image to the left.
+* there are some bright pixels on the left and on the bottom. These shift the
+  center of gravity - which is already close to the center of the image -
+  further to the lower left.
+
+Counter measures:
+
+1. Make COG estimation more robust: Set the center circle of the cartesian
+   image to zero before computing the COG. This avoids that the hand itself
+   already has a COG close to the center (due to its central part and due to
+   its "hind end").
+2. Adjust cropping so that center of rotation is more accurately centered.
+   I do this manually for my meter installation. For our users, we should
+   provide a tool that clearly indicates the center of the crop and maybe
+   clearly indicate this problem in the setup instructions.
+3. Make COG of *polar* image more robust. Removing any bright region that is
+   *not* connected to the upper edge of the image seems a very promising
+   approach.
+4. Think about ways to improve "hand scale conversion" to suppress false bright
+   pixels as we have here.
