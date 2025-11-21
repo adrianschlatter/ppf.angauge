@@ -1,5 +1,6 @@
 import numpy as np
 from .image_processing import read_bmp_rectangle, to_handscale, cog
+from typing import Callable
 
 
 def to_polar(img_hand: np.ndarray) -> np.ndarray:
@@ -27,6 +28,81 @@ def to_polar(img_hand: np.ndarray) -> np.ndarray:
     img_polar = img_hand[Y.astype(int), X.astype(int)]
 
     return img_polar, theta, mu_theta
+
+
+def flood_fill(func: Callable[[int, int], bool],
+               points: set[tuple[int, int]]) -> np.ndarray[bool]:
+
+    def uncover(pnt: tuple[int, int]) -> bool:
+        i, j = pnt
+        scanned.add(pnt)
+        return func(i, j)
+
+    scanned = set()
+    h, w = func.n_r, func.n_theta
+
+    while points != set():
+        hits = [pnt for pnt in points - scanned if uncover(pnt)]
+        points = set()
+        for (di, dj) in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            for i, j in hits:
+                if 0 <= i + di < h:
+                    points.add((i + di, (j + dj) % w))
+
+
+class ImageFunction:
+
+    def __init__(self, img: np.ndarray, n_r: int, n_theta: int,
+                 r_min: float, r_max: float, threshold: float):
+        self.img = img
+        self.n_r, self.n_theta = n_r, n_theta
+        self.r_min, self.r_max = r_min, r_max
+        self.threshold = threshold
+        self.dr = (r_max - r_min) / self.n_r
+        self.dtheta = 2 * np.pi / self.n_theta
+
+        self.sum_i_y = self.sum_i_x = 0.
+        self.sum_count = 0.
+        self.theta_distrib = np.zeros(n_theta, dtype='float')
+
+    def __call__(self, i_r: int, i_theta: int) -> bool:
+        # convert polar pixel numbers to (r, theta):
+        r = self.r_min + i_r * self.dr
+        theta = i_theta * self.dtheta
+
+        # convert polar to cartesian:
+        x = r * np.sin(theta) + 0.5 * self.img.shape[1]
+        y = 0.5 * self.img.shape[0] - r * np.cos(theta)
+
+        # convert to pixel indices:
+        i_y = max(0, min(self.img.shape[0] - 1, round(y)))
+        i_x = max(0, min(self.img.shape[1] - 1, round(x)))
+
+        # lookup pixel in original image:
+        rgb = self.img[i_y, i_x]
+
+        # convert to grayscale:
+        # value = to_handscale(rgb)
+        value = rgb
+
+        # is this a bright pixel?
+        is_bright = value > self.threshold
+
+        # accumulate center of gravity sums:
+        self.sum_i_y += i_y * value
+        self.sum_i_x += i_x * value
+        self.sum_count += value
+
+        # accumulate theta distribution for std dev calculation:
+        self.theta_distrib[i_theta] += value
+
+        # lookup pixel in image and compare to threshold:
+        return is_bright
+
+    def cog(self) -> tuple[float, float]:
+        if self.sum_count == 0:
+            raise ValueError("No bright pixels found!")
+        return (self.sum_i_y / self.sum_count, self.sum_i_x / self.sum_count)
 
 
 def hand2digit(img_hand: np.ndarray) -> tuple[float, float]:
@@ -59,25 +135,46 @@ def hand2digit(img_hand: np.ndarray) -> tuple[float, float]:
         detected).
     """
 
-    img_polar, theta, mu_theta = to_polar(img_hand)
+    # define grid in polar coordinates:
+    # rmax: don't go outside image
+    # rmin: avoid seeing tail of the hand
+    rmin, rmax = 18/40, 1.0  # relative to half image size
+    rimg = min(img_hand.shape) / 2
+    n_r, n_theta = 32, 64
 
-    # center of gravity in polar coordinates:
-    c_theta, c_r = cog(img_polar)
-    c_theta *= np.pi / len(theta)
+    func = ImageFunction(img_hand, n_r, n_theta,
+                         rmin * rimg, rmax * rimg,
+                         threshold=0.5 * img_hand.max())
 
-    # update estimate of hand angle:
-    mu_theta += c_theta
+    # starting points for flood fill: all points at minimum radius:
+    points = set((0, j) for j in range(n_theta))
 
-    # get the std dev in angle
-    dtheta = theta - c_theta
-    theta_polar = img_polar.sum(axis=0)
-    theta_polar_sum = theta_polar.sum()
-    if theta_polar_sum == 0:
-        raise ValueError("theta_polar.sum() is zero!")
-    sigma_theta = np.sqrt((dtheta**2 * theta_polar).sum() / theta_polar_sum)
-    sigma_theta = np.pi / len(theta)
+    # process all (hand-) pixels connected to starting points:
+    flood_fill(func, points)
 
-    return (mu_theta, sigma_theta)
+    # retrieve center of gravity in cartesian coordinates:
+    c_y, c_x = func.cog()
+
+    # derive hand angle:
+    mu_theta_init = np.arctan2(c_x - img_hand.shape[1] / 2,
+                               img_hand.shape[0] / 2 - c_y)
+
+    # j_index of center of gravity in polar coordinates:
+    j_mu = round((mu_theta_init % (2 * np.pi)) / (2 * np.pi) * n_theta)
+
+    # get theta distribution shifted so that mu_theta is at index 32:
+    theta_dist = np.roll(func.theta_distrib, -j_mu + 32)
+
+    # corresponding theta axis:
+    theta_axis = np.linspace(mu_theta_init - np.pi, mu_theta_init + np.pi,
+                             n_theta, endpoint=False)
+
+    mu_theta = (theta_dist * theta_axis).sum() / theta_dist.sum()
+    sigma_theta = np.sqrt(
+                        ((theta_dist * (theta_axis - mu_theta)**2).sum()
+                         / theta_dist.sum()))
+
+    return (mu_theta % (2 * np.pi), sigma_theta)
 
 
 def read_meter(image_path: str, config: list[dict]) -> list[dict]:
@@ -106,6 +203,7 @@ def read_meter(image_path: str, config: list[dict]) -> list[dict]:
         img_clock = read_bmp_rectangle(
                         image_path, cfg['x0'], cfg['y0'], cfg['w'], cfg['w'])
         img_hand = to_handscale(img_clock)
+        # img_hand = img_clock
         try:
             theta, dtheta = hand2digit(img_hand)
         except ValueError:
