@@ -1,33 +1,6 @@
 import numpy as np
-from .image_processing import read_bmp_rectangle, to_handscale, cog
+from .image_processing import read_bmp_rectangle, to_handscale
 from typing import Callable
-
-
-def to_polar(img_hand: np.ndarray) -> np.ndarray:
-    """
-    Convert hand image to polar coordinates.
-    """
-
-    r_max = min(img_hand.shape) / 2.
-    x_pixel = np.arange(img_hand.shape[1]) - img_hand.shape[1] / 2
-    y_pixel = img_hand.shape[0] / 2 - np.arange(img_hand.shape[0])
-    r2_pixel = x_pixel[None, :]**2 + y_pixel[:, None]**2
-
-    try:
-        c_x, c_y = cog(img_hand * (r2_pixel >= (0.35 * r_max)**2))
-    except ValueError:
-        raise ValueError("Failed to compute center of gravity of hand image")
-
-    mu_theta = np.arctan2(c_x, c_y)
-    r_min = 14/40 * r_max
-    r = np.linspace(r_min, r_max, img_hand.shape[0], endpoint=False)
-    theta = np.linspace(mu_theta - np.pi / 2, mu_theta + np.pi / 2,
-                        img_hand.shape[1])
-    X = r[:, None] * np.sin(theta[None, :]) + img_hand.shape[1] / 2
-    Y = img_hand.shape[0] / 2 - r[:, None] * np.cos(theta[None, :])
-    img_polar = img_hand[Y.astype(int), X.astype(int)]
-
-    return img_polar, theta, mu_theta
 
 
 def flood_fill(func: Callable[[int, int], bool],
@@ -48,6 +21,9 @@ def flood_fill(func: Callable[[int, int], bool],
             for i, j in hits:
                 if 0 <= i + di < h:
                     points.add((i + di, (j + dj) % w))
+
+    # useful for diagnostics:
+    return scanned, func.theta_distrib
 
 
 class ImageFunction:
@@ -99,11 +75,6 @@ class ImageFunction:
         # lookup pixel in image and compare to threshold:
         return is_bright
 
-    def cog(self) -> tuple[float, float]:
-        if self.sum_count == 0:
-            raise ValueError("No bright pixels found!")
-        return (self.sum_i_y / self.sum_count, self.sum_i_x / self.sum_count)
-
 
 def hand2digit(img_hand: np.ndarray) -> tuple[float, float]:
     """
@@ -137,9 +108,10 @@ def hand2digit(img_hand: np.ndarray) -> tuple[float, float]:
 
     # define grid in polar coordinates:
     # rmax: don't go outside image
-    # rmin: avoid seeing tail of the hand
-    rmin, rmax = 18/40, 1.0  # relative to half image size
+    # rmin: larger than half of the hand's width (so that front- and back-side
+    # of hand are separated in theta)
     rimg = min(img_hand.shape) / 2
+    rmin, rmax = 0.25, 1.0  # relative to half image width
     n_r, n_theta = 32, 64
 
     func = ImageFunction(img_hand, n_r, n_theta,
@@ -152,22 +124,21 @@ def hand2digit(img_hand: np.ndarray) -> tuple[float, float]:
     # process all (hand-) pixels connected to starting points:
     flood_fill(func, points)
 
-    # retrieve center of gravity in cartesian coordinates:
-    c_y, c_x = func.cog()
+    # find peak of theta distribution:
+    j_mu = np.argmax(func.theta_distrib)
+    theta_peak = j_mu * 2 * np.pi / n_theta
 
-    # derive hand angle:
-    mu_theta_init = np.arctan2(c_x - img_hand.shape[1] / 2,
-                               img_hand.shape[0] / 2 - c_y)
-
-    # j_index of center of gravity in polar coordinates:
-    j_mu = round((mu_theta_init % (2 * np.pi)) / (2 * np.pi) * n_theta)
-
-    # get theta distribution shifted so that mu_theta is at center index:
-    theta_dist = np.roll(func.theta_distrib, -j_mu + n_theta // 2)
+    # shift theta distribution so that theta_peak is at center of left half:
+    theta_dist = np.roll(func.theta_distrib, -j_mu + n_theta // 4)
+    # if the back-end of the hand is visible, it is now close to the center of
+    # the right half; add both halves to a) improve statistics and b) avoid
+    # problems with mu calculation of a distribution with 2 peaks:
+    theta_dist = theta_dist[:n_theta // 2] + theta_dist[n_theta // 2:]
 
     # corresponding theta axis:
-    theta_axis = np.linspace(mu_theta_init - np.pi, mu_theta_init + np.pi,
-                             n_theta, endpoint=False)
+    theta_axis = np.linspace(theta_peak - 0.5 * np.pi,
+                             theta_peak + 0.5 * np.pi,
+                             n_theta // 2, endpoint=False)
 
     mu_theta = (theta_dist * theta_axis).sum() / theta_dist.sum()
     sigma_theta = np.sqrt(
