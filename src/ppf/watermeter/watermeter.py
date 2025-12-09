@@ -1,6 +1,7 @@
 import numpy as np
-from .image_processing import read_bmp_rectangle, to_handscale
 from typing import Callable
+from .image_processing import to_handscale
+from .io import read_bmp_rectangle
 
 
 def flood_fill(func: Callable[[int, int], bool],
