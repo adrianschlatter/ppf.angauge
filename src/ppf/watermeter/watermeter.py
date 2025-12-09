@@ -162,8 +162,8 @@ def hand2digit(img_hand: np.ndarray) -> tuple[float, float]:
     # j_index of center of gravity in polar coordinates:
     j_mu = round((mu_theta_init % (2 * np.pi)) / (2 * np.pi) * n_theta)
 
-    # get theta distribution shifted so that mu_theta is at index 32:
-    theta_dist = np.roll(func.theta_distrib, -j_mu + 32)
+    # get theta distribution shifted so that mu_theta is at center index:
+    theta_dist = np.roll(func.theta_distrib, -j_mu + n_theta // 2)
 
     # corresponding theta axis:
     theta_axis = np.linspace(mu_theta_init - np.pi, mu_theta_init + np.pi,
