@@ -77,7 +77,7 @@ class ImageFunction:
         return is_bright
 
 
-def hand2digit(img_hand: np.ndarray) -> tuple[float, float]:
+def read_indicator(img_hand: np.ndarray) -> tuple[float, float]:
     """
     Convert image of indicator to digit and its uncertainty.
 
@@ -177,7 +177,7 @@ def read_meter(image_path: str, config: list[dict]) -> list[dict]:
         img_hand = to_handscale(img_clock)
         # img_hand = img_clock
         try:
-            theta, dtheta = hand2digit(img_hand)
+            theta, dtheta = read_indicator(img_hand)
         except ValueError:
             raise ValueError(
                     f"Failed to read clock {i}" f"in image {image_path}")
