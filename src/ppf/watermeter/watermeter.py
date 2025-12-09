@@ -113,7 +113,7 @@ def read_indicator(img_hand: np.ndarray) -> tuple[float, float]:
     # of hand are separated in theta)
     rimg = min(img_hand.shape) / 2
     rmin, rmax = 0.25, 1.0  # relative to half image width
-    n_r, n_theta = 32, 64
+    n_r, n_theta = 16, 32
 
     func = ImageFunction(img_hand, n_r, n_theta,
                          rmin * rimg, rmax * rimg,
