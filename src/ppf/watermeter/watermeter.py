@@ -1,84 +1,29 @@
 import numpy as np
-from typing import Callable
-from .image_processing import to_handscale
+from .image_processing import flood_fill, VirtualImage
 from .io import read_bmp_rectangle
-
-
-def flood_fill(func: Callable[[int, int], bool],
-               points: set[tuple[int, int]]) -> np.ndarray[bool]:
-
-    def uncover(pnt: tuple[int, int]) -> bool:
-        i, j = pnt
-        scanned.add(pnt)
-        return func(i, j)
-
-    scanned = set()
-    h, w = func.n_r, func.n_theta
-
-    while points != set():
-        hits = [pnt for pnt in points - scanned if uncover(pnt)]
-        points = set()
-        for (di, dj) in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-            for i, j in hits:
-                if 0 <= i + di < h:
-                    points.add((i + di, (j + dj) % w))
-
-    # useful for diagnostics:
-    return scanned, func.theta_distrib
-
-
-class ImageFunction:
-
-    def __init__(self, img: np.ndarray, n_r: int, n_theta: int,
-                 r_min: float, r_max: float, threshold: float):
-        self.img = img
-        self.h_half, self.w_half = 0.5 * img.shape[0], 0.5 * img.shape[1]
-        self.h_max, self.w_max = img.shape[0] - 1, img.shape[1] - 1
-        self.n_r, self.n_theta = n_r, n_theta
-        self.r_min, self.r_max = r_min, r_max
-        self.dr = (r_max - r_min) / self.n_r
-        self.dtheta = 2 * np.pi / self.n_theta
-        self.threshold = threshold
-
-        self.theta_distrib = np.zeros(n_theta, dtype='float')
-
-        # precompute sine and cosine tables:
-        theta = np.linspace(0, 2 * np.pi, n_theta, endpoint=False)
-        self.sine_table = np.sin(theta)
-        self.cosine_table = np.cos(theta)
-
-    def __call__(self, i_r: int, i_theta: int) -> bool:
-        # convert polar pixel numbers to (r, theta):
-        r = i_r * self.dr + self.r_min
-
-        # convert polar to cartesian:
-        x = self.w_half + r * self.sine_table[i_theta]
-        y = self.h_half - r * self.cosine_table[i_theta]
-
-        # convert to pixel indices:
-        i_y = max(0, min(self.h_max, round(y)))
-        i_x = max(0, min(self.w_max, round(x)))
-
-        # lookup pixel in original image and convert to grayscale:
-        value = to_handscale(*self.img[i_y, i_x])
-
-        # accumulate theta distribution for std dev calculation:
-        self.theta_distrib[i_theta] += value
-
-        # return whether pixel is above threshold:
-        return value > self.threshold
 
 
 def read_indicator(img_hand: np.ndarray) -> tuple[float, float]:
     """
-    Convert image of indicator to digit and its uncertainty.
+    Estimate angle of hand and error bare from image of an indicator
+    (=dial and hand).
+
+    It does this by detecting the hand in polar coordinates using a
+    flood-fill-like algorithm to find all connected hand pixels starting
+    from the center of the dial. From the detected hand pixels, a
+    distribution of pixel intensities over angle is computed, from which
+    the mean angle and standard deviation is calculated.
+
+    Note: It does not analyze the dial: It determines the clockwise angle of
+    the hand relative to the image's upward direction. If the dial's 0
+    direction is not aligned with the image's upward direction, this must be
+    compensated for later.
 
     Parameters
     ----------
 
     img_hand :
-        2D numpy array
-        Image of the hand in grayscale (bright hand on dark background).
+        Image (2D numpy array) of an indicator (dial and hand).
 
     Returns
     -------
@@ -87,16 +32,7 @@ def read_indicator(img_hand: np.ndarray) -> tuple[float, float]:
         Estimated angle of the indicator in radians [0, 2*pi[.
 
     sigma_theta : float
-        Estimated standard deviation of the angle in radians [0, 2*pi[.
-
-    Raises
-    ------
-
-    ValueError :
-        If the center of gravity cannot be computed or if there is a division
-        by zero during the calculation of the standard deviation. Both happen
-        if the input image is (almost) completely black (no indicator
-        detected).
+        Estimated standard deviation of the angle in radians.
     """
 
     # define grid in polar coordinates:
@@ -108,9 +44,8 @@ def read_indicator(img_hand: np.ndarray) -> tuple[float, float]:
     n_r, n_theta = 16, 32
     threshold = 128
 
-    func = ImageFunction(img_hand, n_r, n_theta,
-                         rmin * rimg, rmax * rimg,
-                         threshold=threshold)
+    func = VirtualImage(img_hand, n_r, n_theta, rmin * rimg, rmax * rimg,
+                        threshold=threshold)
 
     # starting points for flood fill: all points at minimum radius:
     points = set((0, j) for j in range(n_theta))
@@ -144,7 +79,7 @@ def read_indicator(img_hand: np.ndarray) -> tuple[float, float]:
 
 def read_meter(image_path: str, config: list[dict]) -> list[dict]:
     """
-    Read meter image and extract reading of each indicator.
+    Reads state of a meter with multiple clock-type indicators from an image.
 
     Parameters
     ----------
@@ -159,10 +94,11 @@ def read_meter(image_path: str, config: list[dict]) -> list[dict]:
     -------
 
     list of dict:
-        List of dictionaries, each containing 'mu' and 'sigma'
-        for each clock in the meter. 'mu' is the estimated digit value, 'sigma'
-        is the estimated uncertainty.
+        List of dictionaries, each containing 'value' and 'sigma'
+        for each clock in the meter. 'value' is the estimated digit value,
+        'sigma' is the estimated uncertainty.
     """
+
     reading = []
     for i, cfg in enumerate(config):
         img_indicator = read_bmp_rectangle(
