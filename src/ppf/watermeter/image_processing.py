@@ -56,6 +56,6 @@ def to_handscale(img: np.ndarray) -> np.ndarray:
     Returns:
         numpy.ndarray: The processed image in hand scale.
     """
-    h = rgb_to_hsv(img / 255.)[:, :, 0]
+    h = rgb_to_hsv(img / 255.)[..., 0]
 
     return np.clip((h - 0.71) / (1 - 0.71), 0., 1.)

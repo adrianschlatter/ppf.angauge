@@ -42,8 +42,8 @@ class ImageFunction:
         self.dr = (r_max - r_min) / self.n_r
         self.dtheta = 2 * np.pi / self.n_theta
 
-        self.sum_i_y = self.sum_i_x = 0.
-        self.sum_count = 0.
+        # self.sum_i_y = self.sum_i_x = 0.
+        # self.sum_count = 0.
         self.theta_distrib = np.zeros(n_theta, dtype='float')
 
     def __call__(self, i_r: int, i_theta: int) -> bool:
@@ -63,8 +63,7 @@ class ImageFunction:
         rgb = self.img[i_y, i_x]
 
         # convert to grayscale:
-        # value = to_handscale(rgb)
-        value = rgb
+        value = to_handscale(rgb)
 
         # compare to threshold:
         is_bright = value > self.threshold
@@ -109,13 +108,14 @@ def read_indicator(img_hand: np.ndarray) -> tuple[float, float]:
     # rmax: don't go outside image
     # rmin: larger than half of the hand's width (so that front- and back-side
     # of hand are separated in theta)
-    rimg = min(img_hand.shape) / 2
+    rimg = min(img_hand.shape[:2]) / 2
     rmin, rmax = 0.25, 1.0  # relative to half image width
     n_r, n_theta = 16, 32
+    threshold = 0.5
 
     func = ImageFunction(img_hand, n_r, n_theta,
                          rmin * rimg, rmax * rimg,
-                         threshold=0.5 * img_hand.max())
+                         threshold=threshold)
 
     # starting points for flood fill: all points at minimum radius:
     points = set((0, j) for j in range(n_theta))
@@ -172,8 +172,7 @@ def read_meter(image_path: str, config: list[dict]) -> list[dict]:
     for i, cfg in enumerate(config):
         img_clock = read_bmp_rectangle(
                         image_path, cfg['x0'], cfg['y0'], cfg['w'], cfg['w'])
-        img_hand = to_handscale(img_clock)
-        # img_hand = img_clock
+        img_hand = img_clock
         try:
             theta, dtheta = read_indicator(img_hand)
         except ValueError:
