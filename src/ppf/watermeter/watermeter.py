@@ -32,6 +32,10 @@ class ImageFunction:
     def __init__(self, img: np.ndarray, n_r: int, n_theta: int,
                  r_min: float, r_max: float, threshold: float):
         self.img = img
+        self.w_half = 0.5 * img.shape[1]
+        self.w_max = img.shape[1] - 1
+        self.h_half = 0.5 * img.shape[0]
+        self.h_max = img.shape[0] - 1
         self.n_r, self.n_theta = n_r, n_theta
         self.r_min, self.r_max = r_min, r_max
         self.threshold = threshold
@@ -44,16 +48,16 @@ class ImageFunction:
 
     def __call__(self, i_r: int, i_theta: int) -> bool:
         # convert polar pixel numbers to (r, theta):
-        r = self.r_min + i_r * self.dr
+        r = i_r * self.dr + self.r_min
         theta = i_theta * self.dtheta
 
         # convert polar to cartesian:
-        x = r * np.sin(theta) + 0.5 * self.img.shape[1]
-        y = 0.5 * self.img.shape[0] - r * np.cos(theta)
+        x = self.w_half + r * np.sin(theta)
+        y = self.h_half - r * np.cos(theta)
 
         # convert to pixel indices:
-        i_y = max(0, min(self.img.shape[0] - 1, round(y)))
-        i_x = max(0, min(self.img.shape[1] - 1, round(x)))
+        i_y = max(0, min(self.h_max, round(y)))
+        i_x = max(0, min(self.w_max, round(x)))
 
         # lookup pixel in original image:
         rgb = self.img[i_y, i_x]
@@ -62,18 +66,12 @@ class ImageFunction:
         # value = to_handscale(rgb)
         value = rgb
 
-        # is this a bright pixel?
+        # compare to threshold:
         is_bright = value > self.threshold
-
-        # accumulate center of gravity sums:
-        self.sum_i_y += i_y * value
-        self.sum_i_x += i_x * value
-        self.sum_count += value
 
         # accumulate theta distribution for std dev calculation:
         self.theta_distrib[i_theta] += value
 
-        # lookup pixel in image and compare to threshold:
         return is_bright
 
 
