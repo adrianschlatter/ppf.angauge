@@ -32,44 +32,41 @@ class ImageFunction:
     def __init__(self, img: np.ndarray, n_r: int, n_theta: int,
                  r_min: float, r_max: float, threshold: float):
         self.img = img
-        self.w_half = 0.5 * img.shape[1]
-        self.w_max = img.shape[1] - 1
-        self.h_half = 0.5 * img.shape[0]
-        self.h_max = img.shape[0] - 1
+        self.h_half, self.w_half = 0.5 * img.shape[0], 0.5 * img.shape[1]
+        self.h_max, self.w_max = img.shape[0] - 1, img.shape[1] - 1
         self.n_r, self.n_theta = n_r, n_theta
         self.r_min, self.r_max = r_min, r_max
-        self.threshold = threshold
         self.dr = (r_max - r_min) / self.n_r
         self.dtheta = 2 * np.pi / self.n_theta
+        self.threshold = threshold
 
         self.theta_distrib = np.zeros(n_theta, dtype='float')
+
+        # precompute sine and cosine tables:
+        theta = np.linspace(0, 2 * np.pi, n_theta, endpoint=False)
+        self.sine_table = np.sin(theta)
+        self.cosine_table = np.cos(theta)
 
     def __call__(self, i_r: int, i_theta: int) -> bool:
         # convert polar pixel numbers to (r, theta):
         r = i_r * self.dr + self.r_min
-        theta = i_theta * self.dtheta
 
         # convert polar to cartesian:
-        x = self.w_half + r * np.sin(theta)
-        y = self.h_half - r * np.cos(theta)
+        x = self.w_half + r * self.sine_table[i_theta]
+        y = self.h_half - r * self.cosine_table[i_theta]
 
         # convert to pixel indices:
         i_y = max(0, min(self.h_max, round(y)))
         i_x = max(0, min(self.w_max, round(x)))
 
-        # lookup pixel in original image:
-        rgb = self.img[i_y, i_x]
-
-        # convert to grayscale:
-        value = to_handscale(rgb)
-
-        # compare to threshold:
-        is_bright = value > self.threshold
+        # lookup pixel in original image and convert to grayscale:
+        value = to_handscale(*self.img[i_y, i_x])
 
         # accumulate theta distribution for std dev calculation:
         self.theta_distrib[i_theta] += value
 
-        return is_bright
+        # return whether pixel is above threshold:
+        return value > self.threshold
 
 
 def read_indicator(img_hand: np.ndarray) -> tuple[float, float]:
@@ -109,7 +106,7 @@ def read_indicator(img_hand: np.ndarray) -> tuple[float, float]:
     rimg = min(img_hand.shape[:2]) / 2
     rmin, rmax = 0.25, 1.0  # relative to half image width
     n_r, n_theta = 16, 32
-    threshold = 0.5
+    threshold = 128
 
     func = ImageFunction(img_hand, n_r, n_theta,
                          rmin * rimg, rmax * rimg,
@@ -168,14 +165,13 @@ def read_meter(image_path: str, config: list[dict]) -> list[dict]:
     """
     reading = []
     for i, cfg in enumerate(config):
-        img_clock = read_bmp_rectangle(
+        img_indicator = read_bmp_rectangle(
                         image_path, cfg['x0'], cfg['y0'], cfg['w'], cfg['w'])
-        img_hand = img_clock
         try:
-            theta, dtheta = read_indicator(img_hand)
+            theta, dtheta = read_indicator(img_indicator)
         except ValueError:
             raise ValueError(
-                    f"Failed to read clock {i}" f"in image {image_path}")
+                    f"Failed to read clock {i} in image {image_path}")
         # compensate known rotation of clock:
         theta += cfg['phi'] / 180. * np.pi
 
