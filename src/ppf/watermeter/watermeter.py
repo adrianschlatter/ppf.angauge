@@ -42,8 +42,6 @@ class ImageFunction:
         self.dr = (r_max - r_min) / self.n_r
         self.dtheta = 2 * np.pi / self.n_theta
 
-        # self.sum_i_y = self.sum_i_x = 0.
-        # self.sum_count = 0.
         self.theta_distrib = np.zeros(n_theta, dtype='float')
 
     def __call__(self, i_r: int, i_theta: int) -> bool:
