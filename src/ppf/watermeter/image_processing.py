@@ -91,6 +91,9 @@ class VirtualImage:
         # return whether pixel is above threshold:
         return value > self.threshold
 
+    def shape(self) -> tuple[int, int]:
+        return (self.n_r, self.n_theta)
+
 
 def flood_fill(img: np.ndarray | VirtualImage,
                points: set[tuple[int, int]]) -> np.ndarray[bool]:
@@ -101,7 +104,7 @@ def flood_fill(img: np.ndarray | VirtualImage,
         return img[i, j]
 
     scanned = set()
-    h, w = img.n_r, img.n_theta
+    h, w = img.shape
 
     while points != set():
         hits = [pnt for pnt in points - scanned if uncover(pnt)]
