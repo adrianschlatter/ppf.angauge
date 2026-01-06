@@ -4,6 +4,7 @@
 
 from argparse import ArgumentParser
 from ppf.watermeter import read_meter, read_config, mle
+from sys import stderr
 
 
 def main():
@@ -24,6 +25,9 @@ def main():
             readings = read_meter(img_path, config)
         except ValueError:
             print(f'{img_path}, nan')
+            continue
+        except FileNotFoundError:
+            print(f'File not found: {img_path}', file=stderr)
             continue
 
         # Find maximum likelihood watermeter state given the readings:
