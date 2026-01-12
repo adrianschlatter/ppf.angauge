@@ -94,6 +94,7 @@ class VirtualImage:
         # return whether pixel is above threshold:
         return value > self.threshold
 
+    @property
     def shape(self) -> tuple[int, int]:
         return (self.n_r, self.n_theta)
 
