@@ -70,23 +70,23 @@ def read_indicator(img_hand: np.ndarray) -> tuple[float, float]:
     return (mu_theta % (2 * np.pi), sigma_theta)
 
 
-def read_meter(image_path: str, config: list[dict]) -> list[dict]:
+def read_meter(img: np.ndarray, config: list[dict]) -> list[dict]:
     """
     Reads state of a meter with multiple clock-type indicators from an image.
 
     Parameters
     ----------
 
-    image_path : str
-        path of image to read (.bmp file format)
+    img : np.ndarray-like
+        Image (3D numpy array, h x w x color) of the entire meter.
 
-    config : List[Dict]
+    config : list[dict]
         Configuration for clock positions, as returned by read_config().
 
     Returns
     -------
 
-    list of dict:
+    list[dict]:
         List of dictionaries, each containing 'value' and 'sigma'
         for each clock in the meter. 'value' is the estimated digit value,
         'sigma' is the estimated uncertainty.
@@ -94,13 +94,9 @@ def read_meter(image_path: str, config: list[dict]) -> list[dict]:
 
     reading = []
     for i, cfg in enumerate(config):
-        img_indicator = read_bmp_rectangle(
-                        image_path, cfg['x0'], cfg['y0'], cfg['w'], cfg['w'])
-        try:
-            theta, dtheta = read_indicator(img_indicator)
-        except ValueError:
-            raise ValueError(
-                    f"Failed to read clock {i} in image {image_path}")
+        img_indicator = img[cfg['y0']: cfg['y0'] + cfg['w'],
+                            cfg['x0']:(cfg['x0'] + cfg['w'])]
+        theta, dtheta = read_indicator(img_indicator)
         # compensate known rotation of clock:
         theta += cfg['phi'] / 180. * np.pi
 

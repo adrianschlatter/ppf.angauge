@@ -3,7 +3,7 @@
 """
 
 from argparse import ArgumentParser
-from ppf.watermeter import read_meter, read_config, mle
+from ppf.watermeter import read_meter, read_config, mle, read_bmp_rectangle
 from sys import stderr
 
 
@@ -22,7 +22,12 @@ def main():
 
     for img_path in args.image_path:
         try:
-            readings = read_meter(img_path, config)
+            img = read_bmp_rectangle(img_path, x=0, y=0, w=0, h=0)
+        except ValueError:
+            raise ValueError(f"Failed to read image {img_path}")
+
+        try:
+            readings = read_meter(img, config)
         except ValueError:
             print(f'{img_path}, nan')
             continue
@@ -30,7 +35,7 @@ def main():
             print(f'File not found: {img_path}', file=stderr)
             continue
 
-        # Find maximum likelihood watermeter state given the readings:
+        # Find maximum likelihood meter state given the readings:
         s_ml, y_ml = mle(readings)
 
         # Apply units

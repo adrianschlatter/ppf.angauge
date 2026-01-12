@@ -28,8 +28,8 @@ def read_config(config_path: str) -> list[dict]:
     return config
 
 
-def read_bmp_rectangle(file_path: str,
-                       x: int, y: int, w: int, h: int) -> np.memmap:
+def read_bmp_rectangle(file_path: str, x: int = 0, y: int = 0,
+                       w: int = 0, h: int = 0) -> np.memmap:
     """
     Returns memory-mapped array of rectangle (x,y,w,h) of BMP file.
     """
@@ -47,6 +47,11 @@ def read_bmp_rectangle(file_path: str,
 
             if x < 0 or y < 0 or x + w > img_width or y + h > img_height:
                 raise ValueError("Rectangle out of bounds")
+
+            if w == 0:
+                w = img_width
+            if h == 0:
+                h = img_height
 
             row_size = ((img_width * 3 + 3) // 4) * 4  # row size with padding
             image_mm = np.memmap(
