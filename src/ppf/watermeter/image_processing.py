@@ -48,6 +48,9 @@ class VirtualImage:
 
     It behaves like a (read-only) 2D numpy array of booleans but it actually
     computes its pixels on-the-fly from a given cartesian image.
+
+    Also, it accumulates a theta distribution of all pixel values accessed via
+    __getitem__.
     """
 
     def __init__(self, img: np.ndarray, n_r: int, n_theta: int,
@@ -115,4 +118,4 @@ def flood_fill(img: np.ndarray | VirtualImage,
                     points.add((i + di, (j + dj) % w))
 
     # useful for diagnostics:
-    return scanned, img.theta_distrib
+    return scanned

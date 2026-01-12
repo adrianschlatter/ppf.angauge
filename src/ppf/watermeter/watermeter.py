@@ -5,19 +5,12 @@ from .io import read_bmp_rectangle
 
 def read_indicator(img_hand: np.ndarray) -> tuple[float, float]:
     """
-    Estimate angle of hand and error bare from image of an indicator
-    (=dial and hand).
+    Estimate angle of hand +/- error bar from image of indicator (=dial and
+    hand).
 
-    It does this by detecting the hand in polar coordinates using a
-    flood-fill-like algorithm to find all connected hand pixels starting
-    from the center of the dial. From the detected hand pixels, a
-    distribution of pixel intensities over angle is computed, from which
-    the mean angle and standard deviation is calculated.
-
-    Note: It does not analyze the dial: It determines the clockwise angle of
-    the hand relative to the image's upward direction. If the dial's 0
-    direction is not aligned with the image's upward direction, this must be
-    compensated for later.
+    Angle is 0 for hand pointing upwards, increases clockwise. Orientation of
+    the dial is not considered: A possible rotation of the dial relative to
+    the image's upward direction must be compensated for later.
 
     Parameters
     ----------
