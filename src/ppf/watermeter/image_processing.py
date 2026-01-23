@@ -42,6 +42,46 @@ def to_handscale(r: int, g: int, b: int) -> int:
     return 0 if handscale <= 0 else handscale   # * 2**-8
 
 
+def to_bw(img_hand: np.ndarray, fg: dict, bg: dict) -> np.ndarray:
+    # hands become true and most of the rest false.
+    # may have some remaining bg as true.
+    fg_mask = (fg['c1'] * img_hand[:, :, 0]
+               + fg['c2'] * img_hand[:, :, 1]
+               + fg['c3'] * img_hand[:, :, 2]) > fg['threshold']
+    if fg['inverted']:
+        fg_mask = ~fg_mask
+
+    # remaining bg becomes true, hands are false.
+    # used to remove remaining bg from fg_mask.
+    bg_mask = (bg['c1'] * img_hand[:, :, 0]
+               + bg['c2'] * img_hand[:, :, 1]
+               + bg['c3'] * img_hand[:, :, 2]) > bg['threshold']
+    if bg['inverted']:
+        bg_mask = ~bg_mask
+
+    # remove remaining bg from fg_mask:
+    img_bw = fg_mask & (~bg_mask)
+
+    return img_bw
+
+
+def to_polar(img: np.ndarray, n_r: int, n_theta: int,
+             r_min: float, r_max: float) -> np.ndarray:
+    h_half, w_half = 0.5 * img.shape[0], 0.5 * img.shape[1]
+    h_max, w_max = img.shape[0] - 1, img.shape[1] - 1
+    r = np.linspace(r_min, r_max, n_r, endpoint=True).reshape(-1, 1)
+    theta = np.linspace(0, 2 * np.pi, n_theta, endpoint=False).reshape(1, -1)
+
+    # precompute sine and cosine tables:
+    sine_table = np.sin(theta)
+    cosine_table = np.cos(theta)
+
+    X = np.clip(np.round(w_half + r * sine_table), 0, w_max).astype(int)
+    Y = np.clip(np.round(h_half - r * cosine_table), 0, h_max).astype(int)
+
+    return img[Y, X]
+
+
 class VirtualImage:
     """
     A VirtualImage represents an image in polar coordinates
@@ -99,7 +139,7 @@ class VirtualImage:
         return (self.n_r, self.n_theta)
 
 
-def flood_fill(img: np.ndarray | VirtualImage,
+def flood_fill(img: np.ndarray,
                points: set[tuple[int, int]]) -> np.ndarray[bool]:
 
     def uncover(pnt: tuple[int, int]) -> bool:
@@ -118,5 +158,4 @@ def flood_fill(img: np.ndarray | VirtualImage,
                 if 0 <= i + di < h:
                     points.add((i + di, (j + dj) % w))
 
-    # useful for diagnostics:
     return scanned

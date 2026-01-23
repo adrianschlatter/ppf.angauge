@@ -1,9 +1,12 @@
 import numpy as np
-from .image_processing import flood_fill, VirtualImage
-from .io import read_bmp_rectangle
+from .image_processing import flood_fill, to_polar, to_bw
 
 
-def read_indicator(img_hand: np.ndarray) -> tuple[float, float]:
+def read_indicator(img_hand: np.ndarray,
+                   fg={'c1': 0, 'c2': 0, 'c3': 1,
+                       'threshold': 128, 'inverted': False},
+                   bg={'c1': 1, 'c2': 0, 'c3': 0,
+                       'threshold': 128, 'inverted': True}) -> tuple[float, float]:
     """
     Estimate angle of hand +/- error bar from image of indicator (=dial and
     hand).
@@ -16,7 +19,7 @@ def read_indicator(img_hand: np.ndarray) -> tuple[float, float]:
     ----------
 
     img_hand :
-        Image (2D numpy array) of an indicator (dial and hand).
+        Image (3D numpy ndarray [h, w, rgb]) of an indicator (dial and hand).
 
     Returns
     -------
@@ -35,23 +38,31 @@ def read_indicator(img_hand: np.ndarray) -> tuple[float, float]:
     rimg = min(img_hand.shape[:2]) / 2
     rmin, rmax = 0.25, 1.0  # relative to half image width
     n_r, n_theta = 16, 32
-    threshold = 128
 
-    func = VirtualImage(img_hand, n_r, n_theta, rmin * rimg, rmax * rimg,
-                        threshold=threshold)
+    img_bw = to_bw(img_hand, fg, bg)
+
+    import matplotlib.pyplot as pl
+    pl.imsave('img_bw.png', img_bw, cmap='gray')
+
+    img_polar_bw = to_polar(img_bw, n_r, n_theta, rmin * rimg, rmax * rimg)
+    pl.imsave('debug.png', img_polar_bw, cmap='gray')
 
     # starting points for flood fill: all points at minimum radius:
-    points = set((0, j) for j in range(n_theta))
+    starting_points = set((0, j) for j in range(n_theta))
 
     # process all (hand-) pixels connected to starting points:
-    flood_fill(func, points)
+    points_connected = flood_fill(img_polar_bw, starting_points)
+
+    theta_distrib = np.zeros(n_theta, dtype='float')
+    for (i_r, i_theta) in points_connected:
+        theta_distrib[i_theta] += img_polar_bw[i_r, i_theta]
 
     # find peak of theta distribution:
-    j_mu = np.argmax(func.theta_distrib)
+    j_mu = np.argmax(theta_distrib)
     theta_peak = j_mu * 2 * np.pi / n_theta
 
     # shift theta distribution so that theta_peak is at center of left half:
-    theta_dist = np.roll(func.theta_distrib, -j_mu + n_theta // 4)
+    theta_dist = np.roll(theta_distrib, -j_mu + n_theta // 4)
     # if the back-end of the hand is visible, it is now close to the center of
     # the right half; add both halves to a) improve statistics and b) avoid
     # problems with mu calculation of a distribution with 2 peaks:
@@ -80,8 +91,9 @@ def read_meter(img: np.ndarray, config: list[dict]) -> list[dict]:
     img : np.ndarray-like
         Image (3D numpy array, h x w x color) of the entire meter.
 
-    config : list[dict]
-        Configuration for clock positions, as returned by read_config().
+    config : dict
+        Configuration for image processing and clock positions, as returned by
+        read_config().
 
     Returns
     -------
@@ -93,10 +105,12 @@ def read_meter(img: np.ndarray, config: list[dict]) -> list[dict]:
     """
 
     reading = []
-    for i, cfg in enumerate(config):
+    indicators = config['indicators']
+    for i, cfg in enumerate(indicators):
         img_indicator = img[cfg['y0']: cfg['y0'] + cfg['w'],
                             cfg['x0']:(cfg['x0'] + cfg['w'])]
-        theta, dtheta = read_indicator(img_indicator)
+        theta, dtheta = read_indicator(img_indicator, config['fg_mask'],
+                                       config['bg_mask'])
         # compensate known rotation of clock:
         theta += cfg['phi'] / 180. * np.pi
 
