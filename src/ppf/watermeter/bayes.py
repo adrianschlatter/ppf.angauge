@@ -85,7 +85,7 @@ def mle(readings: list[dict]) -> (float, float):
 
         Returns True if a better neighbor was found, False otherwise.
         """
-        nonlocal bmi_0, y_max, s_max
+        nonlocal y_max, s_max
         for k in range(len(readings)):
             for delta in [-1, 1]:
                 # shift s up or down so that reading[k] stays the same:

@@ -1,5 +1,6 @@
 # These are not needed in the distribution:
 recursive-exclude tests *
+recursive-exclude diag *
 exclude tox.ini
 exclude .gitignore
 recursive-exclude .github *
