@@ -6,3 +6,4 @@ indicators = [
     {x0=256, y0=311, w=80, phi=-69.00, Asin=-0.040, Acos=-0.045},
     {x0=325, y0=360, w=80, phi=-70.58, Asin=-0.039, Acos=-0.038}
   ]
+multiplier = 0.0001
