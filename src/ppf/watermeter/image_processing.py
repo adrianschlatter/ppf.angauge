@@ -1,4 +1,6 @@
 import numpy as np
+from skimage.color import rgb2hsv
+from skimage.filters import threshold_local
 
 
 def to_handscale(r: int, g: int, b: int) -> int:
@@ -42,27 +44,52 @@ def to_handscale(r: int, g: int, b: int) -> int:
     return 0 if handscale <= 0 else handscale   # * 2**-8
 
 
-def to_bw(img_hand: np.ndarray, fg: dict, bg: dict) -> np.ndarray:
-    # hands become true and most of the rest false.
-    # may have some remaining bg as true.
-    fg_mask = (fg['c1'] * img_hand[:, :, 0]
-               + fg['c2'] * img_hand[:, :, 1]
-               + fg['c3'] * img_hand[:, :, 2]) > fg['threshold']
-    if fg['inverted']:
-        fg_mask = ~fg_mask
+def to_gray(img: np.ndarray,
+            c0: float, c1: float, c2: float, c3: float) -> np.ndarray:
+    """
+    Convert RGB image to grayscale using weighted HSV components.
 
-    # remaining bg becomes true, hands are false.
-    # used to remove remaining bg from fg_mask.
-    bg_mask = (bg['c1'] * img_hand[:, :, 0]
-               + bg['c2'] * img_hand[:, :, 1]
-               + bg['c3'] * img_hand[:, :, 2]) > bg['threshold']
-    if bg['inverted']:
-        bg_mask = ~bg_mask
+    Args:
+        img: Input RGB image as numpy ndarray of shape (h, w, 3)
+        c0, c1, c2, c3: Weights for constant term, H, S, V components
 
-    # remove remaining bg from fg_mask:
-    img_bw = fg_mask & (~bg_mask)
+    Returns:
+        Grayscale image as numpy ndarray of shape (h, w) with dtype 'uint8
+    """
+    img_hsv = rgb2hsv(img / 256.)
+    img_gray = (c0
+                + c1 * img_hsv[:, :, 0]
+                + c2 * img_hsv[:, :, 1]
+                + c3 * img_hsv[:, :, 2])
+    return np.clip(img_gray * 256, 0, 255).astype('uint8')
 
-    return img_bw
+
+def to_bw(img_gray: np.ndarray, method: str, offset: float,
+          blocksize: int = None, invert: bool = False) -> np.ndarray:
+    """
+    Binarize grayscale image using global or local thresholding.
+
+    Args:
+        img_gray: Input grayscale image as numpy ndarray of shape (h, w)
+        method: 'global' for global thresholding, 'local' for local
+                thresholding
+        offset: Offset value for thresholding
+        blocksize: Size of the local neighborhood for local thresholding
+                   (ignored for global thresholding)
+
+    Returns:
+        Binarized image as numpy ndarray of shape (h, w) with dtype 'bool'
+    """
+    if method == 'global':
+        img_bw = img_gray > offset
+    elif method == 'local':
+        local_thresh = threshold_local(img_gray,
+                                       block_size=blocksize, offset=offset)
+        img_bw = img_gray > local_thresh
+    else:
+        raise ValueError(f'Unknown binarization method: {method}')
+
+    return img_bw if not invert else ~img_bw
 
 
 def to_polar(img: np.ndarray, n_r: int, n_theta: int,

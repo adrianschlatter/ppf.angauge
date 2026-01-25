@@ -12,7 +12,7 @@ def main():
     parser.add_argument("config_path", type=str, help="Path to config file")
     parser.add_argument("image_path", type=str, nargs='+',
                         help="Path to the meter image")
-    parser.add_argument("--multiplier", type=float, default=0.0001,
+    parser.add_argument("--multiplier", type=float, default=None,
                         help="Multiplier of finest indicator (e.g. 0.0001)")
     parser.add_argument("--hands", action="store_true",
                         help="print hand readings")
@@ -39,7 +39,10 @@ def main():
         s_ml, y_ml = mle(readings)
 
         # Apply units
-        s_ml *= args.multiplier
+        if args.multiplier is not None:
+            s_ml *= args.multiplier
+        elif 'multiplier' in config:
+            s_ml *= config['multiplier']
 
         if args.hands:
             hand_readings = ', '.join([f'{r["value"]:.2f}' for r in readings])

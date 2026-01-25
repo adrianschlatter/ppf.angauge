@@ -1,12 +1,11 @@
 import numpy as np
-from .image_processing import flood_fill, to_polar, to_bw
+from .image_processing import flood_fill, to_polar, to_gray, to_bw
 
 
 def read_indicator(img_hand: np.ndarray,
-                   fg={'c1': 0, 'c2': 0, 'c3': 1,
-                       'threshold': 128, 'inverted': False},
-                   bg={'c1': 1, 'c2': 0, 'c3': 0,
-                       'threshold': 128, 'inverted': True}) -> tuple[float, float]:
+                   to_gray_params={'c0': 0, 'c1': 0, 'c2': 0, 'c3': 1},
+                   to_bw_params={'method': 'global', 'offset': 128}
+                   ) -> tuple[float, float]:
     """
     Estimate angle of hand +/- error bar from image of indicator (=dial and
     hand).
@@ -37,15 +36,14 @@ def read_indicator(img_hand: np.ndarray,
     # of hand are separated in theta)
     rimg = min(img_hand.shape[:2]) / 2
     rmin, rmax = 0.25, 1.0  # relative to half image width
-    n_r, n_theta = 16, 32
+    n_r, n_theta = 16, 128
 
-    img_bw = to_bw(img_hand, fg, bg)
+    img_gray = to_gray(img_hand, **to_gray_params)
+    img_bw = to_bw(img_gray, **to_bw_params)
 
-    import matplotlib.pyplot as pl
-    pl.imsave('img_bw.png', img_bw, cmap='gray')
 
+    img_polar_gray = to_polar(img_gray, n_r, n_theta, rmin * rimg, rmax * rimg)
     img_polar_bw = to_polar(img_bw, n_r, n_theta, rmin * rimg, rmax * rimg)
-    pl.imsave('debug.png', img_polar_bw, cmap='gray')
 
     # starting points for flood fill: all points at minimum radius:
     starting_points = set((0, j) for j in range(n_theta))
@@ -55,7 +53,7 @@ def read_indicator(img_hand: np.ndarray,
 
     theta_distrib = np.zeros(n_theta, dtype='float')
     for (i_r, i_theta) in points_connected:
-        theta_distrib[i_theta] += img_polar_bw[i_r, i_theta]
+        theta_distrib[i_theta] += img_polar_gray[i_r, i_theta]
 
     # find peak of theta distribution:
     j_mu = np.argmax(theta_distrib)
@@ -109,14 +107,14 @@ def read_meter(img: np.ndarray, config: list[dict]) -> list[dict]:
     for i, cfg in enumerate(indicators):
         img_indicator = img[cfg['y0']: cfg['y0'] + cfg['w'],
                             cfg['x0']:(cfg['x0'] + cfg['w'])]
-        theta, dtheta = read_indicator(img_indicator, config['fg_mask'],
-                                       config['bg_mask'])
+        theta, dtheta = read_indicator(img_indicator, config['hsv_to_gray'],
+                                       config['gray_to_bw'])
         # compensate known rotation of clock:
         theta += cfg['phi'] / 180. * np.pi
 
         # compensate elliptical distortion:
-        theta += cfg['Asin'] * np.sin(theta)
-        theta += cfg['Acos'] * np.cos(theta)
+        theta += getattr(cfg, 'Asin', 0) * np.sin(theta)
+        theta += getattr(cfg, 'Acos', 0) * np.cos(theta)
 
         # convert to digit:
         digit = theta / 2 / np.pi * 10
