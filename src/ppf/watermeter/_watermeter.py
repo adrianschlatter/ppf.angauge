@@ -1,7 +1,7 @@
 from __future__ import annotations
 import numpy as np
-from .image_processing import flood_fill, to_polar, to_gray, to_bw
-from .utils import export
+from ._image_processing import flood_fill, to_polar, to_gray, to_bw
+from ._utils import export
 
 
 def read_indicator(img_hand: np.ndarray,

@@ -14,15 +14,22 @@ except ImportError:
 
 __version__ = version(__name__)
 
-# import every function, class, etc. that should be visible in the package
-from .watermeter import *
-from .bayes import *
-from .image_processing import *
-from .io import *
+__all__ = []
 
-del watermeter
-del bayes
-del image_processing
-del io
-del utils
+# import every function, class, etc. that should be visible in the package
+from ._watermeter import *
+from ._bayes import *
+from ._image_processing import *
+from ._io import *
+
+__all__ += _watermeter.__all__
+__all__ += _bayes.__all__
+__all__ += _image_processing.__all__
+__all__ += _io.__all__
+
+del _watermeter
+del _bayes
+del _image_processing
+del _io
+del _utils
 del version

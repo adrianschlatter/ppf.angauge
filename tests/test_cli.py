@@ -5,7 +5,7 @@ test command-line tool
 
 from unittest.mock import patch
 from pathlib import Path
-from ppf.watermeter import cli
+from ppf.watermeter import _cli as cli
 
 
 def test_known_img_watermeter(capfd):

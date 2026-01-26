@@ -4,6 +4,8 @@ import matplotlib.pyplot as pl
 from matplotlib.widgets import Button, Slider
 from matplotlib.gridspec import GridSpec
 import ppf.watermeter as wm
+from ppf.watermeter._image_processing import (
+    to_gray, to_bw, to_polar, flood_fill)
 from scipy.optimize import least_squares
 
 
@@ -244,7 +246,7 @@ class App:
             self.ax_color[3 - i].imshow(crop)
             self.ax_color[3 - i].set_xticks([])
             self.ax_color[3 - i].set_yticks([])
-            gray = wm.to_gray(crop, **self.cfgs['to_gray'])
+            gray = to_gray(crop, **self.cfgs['to_gray'])
             self.ax_handscale[3 - i].cla()
             self.ax_handscale[3 - i].imshow(gray, cmap='gray', vmin=0, vmax=1)
             self.ax_handscale[3 - i].set_xticks([])
@@ -254,14 +256,14 @@ class App:
             rimg = min(gray.shape) / 2
             n_r, n_theta = 32, 64
 
-            img_bw = wm.to_bw(gray, **self.cfgs['to_bw'])
-            img_polar_bw = wm.to_polar(img_bw, n_r, n_theta,
-                                       r_min * rimg, r_max * rimg)
+            img_bw = to_bw(gray, **self.cfgs['to_bw'])
+            img_polar_bw = to_polar(img_bw, n_r, n_theta,
+                                    r_min * rimg, r_max * rimg)
 
             # starting points for flood fill: all points at minimum radius:
             starting_points = set((0, j) for j in range(n_theta))
 
-            scanned = wm.flood_fill(img_polar_bw, points=starting_points)
+            scanned = flood_fill(img_polar_bw, points=starting_points)
             scanned = np.array(list(scanned))
             polar = np.zeros((n_r, n_theta), dtype='float')
             polar[scanned[:, 0], scanned[:, 1]] = 1.0
@@ -293,7 +295,7 @@ def readings_from_array(arr_hands, arr_sigmas):
 
 if __name__ == '__main__':
     pl.close('all')
-    df = pd.read_csv('../experimental/shots_run1/readings_hsv.csv',
+    df = pd.read_csv('../experimental/shots_run1/readings_A_in_deg.csv',
                      names=['date', 's',
                             'E', 'Z', 'H', 'T',
                             'dE', 'dZ', 'dH', 'dT'],

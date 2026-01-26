@@ -4,7 +4,7 @@
 
 from argparse import ArgumentParser
 from ppf.watermeter import read_meter, read_config, mle
-from ppf.watermeter.io import read_bmp_rectangle
+from ppf.watermeter._io import read_bmp_rectangle
 from sys import stderr
 
 

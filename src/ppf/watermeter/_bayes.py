@@ -1,6 +1,6 @@
 from __future__ import annotations
 import numpy as np
-from .utils import export
+from ._utils import export
 
 
 def loglikelihood(s: np.ndarray,

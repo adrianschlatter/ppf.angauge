@@ -2,7 +2,7 @@ from __future__ import annotations
 import mmap
 import struct
 import numpy as np
-from .utils import export
+from ._utils import export
 
 try:
     import tomllib
