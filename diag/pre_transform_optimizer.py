@@ -4,7 +4,6 @@ import matplotlib.pyplot as pl
 from matplotlib.widgets import Button, Slider
 from matplotlib.gridspec import GridSpec
 import ppf.watermeter as wm
-from ppf.watermeter.diagnostics import cog
 from scipy.optimize import least_squares
 
 
@@ -266,16 +265,10 @@ class App:
             scanned = np.array(list(scanned))
             polar = np.zeros((n_r, n_theta), dtype='float')
             polar[scanned[:, 0], scanned[:, 1]] = 1.0
-            x_pixel = np.arange(gray.shape[1]) - gray.shape[1] / 2
-            y_pixel = gray.shape[0] / 2 - np.arange(gray.shape[0])
-            r2_pixel = x_pixel[None, :]**2 + y_pixel[:, None]**2
-            c_x, c_y = cog(gray * (r2_pixel >= r_min**2))
             self.ax_polar[3 - i].cla()
             self.ax_polar[3 - i].imshow(polar, cmap='gray', vmin=0, vmax=1)
             self.ax_handscale[3 - i].plot(
                 [0.5 * gray.shape[1]], [0.5 * gray.shape[0]], 'bo', ms=3)
-            self.ax_handscale[3 - i].plot(
-                [0.5 * gray.shape[1] + c_x], [0.5 * gray.shape[0] - c_y], 'r+')
             self.ax_polar[3 - i].set_xticks([])
             self.ax_polar[3 - i].set_yticks([])
             self.ax_polar[3 - i].set_xlabel(

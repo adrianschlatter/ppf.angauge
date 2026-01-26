@@ -2,32 +2,6 @@ from __future__ import annotations
 import numpy as np
 
 
-def cog(img: np.ndarray) -> tuple[float, float]:
-    """
-    Computes the center of gravity of the image.
-
-    Args:
-        img (numpy.ndarray): The input image.
-
-    Returns:
-        tuple: The x and y coordinates of the center of gravity.
-
-    Raises:
-        ValueError: If the sum of the image is zero.
-    """
-    h, w = img.shape[:2]
-    x = np.arange(w)
-    y = np.arange(h)
-    X, Y = np.meshgrid(x, y, indexing='xy')
-    imsum = img.sum()
-    if imsum == 0:
-        raise ValueError("img.sum() is zero!")
-    c_x = np.sum(X * img) / imsum
-    c_y = np.sum(Y * img) / imsum
-
-    return c_x - w / 2, h / 2 - c_y
-
-
 def to_polar(img_hand: np.ndarray) -> np.ndarray:
     """
     Convert hand image to polar coordinates.
