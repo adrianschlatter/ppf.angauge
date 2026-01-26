@@ -42,7 +42,6 @@ def read_indicator(img_hand: np.ndarray,
     img_gray = to_gray(img_hand, **to_gray_params)
     img_bw = to_bw(img_gray, **to_bw_params)
 
-
     img_polar_gray = to_polar(img_gray, n_r, n_theta, rmin * rimg, rmax * rimg)
     img_polar_bw = to_polar(img_bw, n_r, n_theta, rmin * rimg, rmax * rimg)
 
