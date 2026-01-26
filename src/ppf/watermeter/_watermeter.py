@@ -115,8 +115,8 @@ def read_meter(img: np.ndarray, config: list[dict]) -> list[dict]:
         theta += cfg['phi'] / 180. * np.pi
 
         # compensate elliptical distortion:
-        theta += getattr(cfg, 'Asin', 0) * np.sin(theta)
-        theta += getattr(cfg, 'Acos', 0) * np.cos(theta)
+        theta += getattr(cfg, 'Asin', 0) / 180. * np.pi * np.sin(theta)
+        theta += getattr(cfg, 'Acos', 0) / 180. * np.pi * np.cos(theta)
 
         # convert to digit:
         digit = theta / 2 / np.pi * 10
