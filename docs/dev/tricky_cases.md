@@ -118,16 +118,15 @@ The tens hand wraps in polar coordinates. This happens because:
 
 Counter measures:
 
-1. Make COG estimation more robust: Set the center circle of the cartesian
-   image to zero before computing the COG. This avoids that the hand itself
-   already has a COG close to the center (due to its central part and due to
-   its "hind end").
+1. Make COG estimation more robust: Don't do it at all. Instead, find the angle
+   having the maximum cumulated brightness in polar coordinates. Then, shift
+   the polar image so that this angle is centered.
 2. Adjust cropping so that center of rotation is more accurately centered.
    I do this manually for my meter installation. For our users, we should
    provide a tool that clearly indicates the center of the crop and maybe
    clearly indicate this problem in the setup instructions.
 3. Make COG of *polar* image more robust. Removing any bright region that is
    *not* connected to the upper edge of the image seems a very promising
-   approach.
+   approach => use flood-fill algorithm for this.
 4. Think about ways to improve "hand scale conversion" to suppress false bright
    pixels as we have here.

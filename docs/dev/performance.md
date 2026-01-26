@@ -1,13 +1,18 @@
 # Performance
 
-On my MacMini, convert all images of 2025-08-20T2* (48 files) to numeric.
+Thoughts on performance:
 
-
-| test                                |   duration (s) | notes                             |
-| ----------------------------------- | -------------- | --------------------------------- |
-| 1 file at a time                    |           32   |                                   |
-| all in 1 call                       |            1.5 | loading python was the bottleneck |
-| 1 file at a time without matplotlib |           12   |                                   |
-| all in 1 call without matplotlib    |            1.0 |                                   |
-| 1 file w/o matplotlib, memmap       |            8.2 |                                   |
-| 1 call w/o matplotlib, memmap       |            0.7 |                                   |
+* do cropping early (reduces image size dramatically)
+* use memory-mapping for reading images (saves memory)
+* flood-fill algorithm:
+    - we follow the pixels we are actually interested in
+    - don't do all the image processing and -tranformation, and *then* run the
+      flood-fill algorithm. Instead, start from an empty polar grid (not even
+      allocated yet, just a thought model of a coordinate system). Then,
+      calculate the pixel as soon as the flood-fill algorithm requests it.
+    - This mean we need a way to stack virtual image operations (such as
+      coordinate transforms, color transform, thresholding, etc.)
+    - Note: In pure python, this is likely slower than pre-computing the entire
+      image. But as soon as we move to Cython, or implement the algorithm in C
+      for use directly on an ESP32 module or similar, this should be much
+      faster.
