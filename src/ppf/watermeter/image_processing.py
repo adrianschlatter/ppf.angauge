@@ -3,6 +3,8 @@ import numpy as np
 from skimage.color import rgb2hsv
 from skimage.filters import threshold_local
 
+__all__ = []
+
 
 def to_gray(img: np.ndarray,
             c0: float, c1: float, c2: float, c3: float) -> np.ndarray:

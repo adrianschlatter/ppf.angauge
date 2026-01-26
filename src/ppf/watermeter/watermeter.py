@@ -1,6 +1,7 @@
 from __future__ import annotations
 import numpy as np
 from .image_processing import flood_fill, to_polar, to_gray, to_bw
+from .utils import export
 
 
 def read_indicator(img_hand: np.ndarray,
@@ -79,6 +80,7 @@ def read_indicator(img_hand: np.ndarray,
     return (mu_theta % (2 * np.pi), sigma_theta)
 
 
+@export
 def read_meter(img: np.ndarray, config: list[dict]) -> list[dict]:
     """
     Reads state of a meter with multiple clock-type indicators from an image.

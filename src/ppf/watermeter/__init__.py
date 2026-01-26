@@ -24,3 +24,5 @@ del watermeter
 del bayes
 del image_processing
 del io
+del utils
+del version

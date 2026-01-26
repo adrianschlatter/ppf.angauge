@@ -2,6 +2,7 @@ from __future__ import annotations
 import mmap
 import struct
 import numpy as np
+from .utils import export
 
 try:
     import tomllib
@@ -12,6 +13,7 @@ except ModuleNotFoundError:
         raise ImportError('This package requires either tomllib or tomli')
 
 
+@export
 def read_config(config_path: str) -> list[dict]:
     """
     Reads the configuration file for clock positions.

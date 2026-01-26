@@ -1,5 +1,6 @@
 from __future__ import annotations
 import numpy as np
+from .utils import export
 
 
 def loglikelihood(s: np.ndarray,
@@ -73,6 +74,7 @@ def initial_guess(readings: list[dict]) -> float:
     return sum([10.**i * r['value'] for i, r in enumerate(readings)])
 
 
+@export
 def mle(readings: list[dict]) -> (float, float):
     """Maximum likelihood of density function defined by readings."""
 
