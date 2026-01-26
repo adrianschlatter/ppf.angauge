@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-ppf.watermeter
-==============
+ppf.angauge
+===========
 
 Converts images of analog gauges to numerical readings. An analog gauge is
 either:
@@ -18,7 +18,7 @@ Example
 -------
 
 ```python
-from ppf.watermeter import read_config, read_meter, mle
+from ppf.angauge import read_config, read_meter, mle
 from matplotlib.pyplot import imread
 
 # read configuration file
@@ -113,17 +113,17 @@ __version__ = version(__name__)
 __all__ = []
 
 # import every function, class, etc. that should be visible in the package
-from ._watermeter import *
+from ._angauge import *
 from ._bayes import *
 from ._image_processing import *
 from ._io import *
 
-__all__ += _watermeter.__all__
+__all__ += _angauge.__all__
 __all__ += _bayes.__all__
 __all__ += _image_processing.__all__
 __all__ += _io.__all__
 
-del _watermeter
+del _angauge
 del _bayes
 del _image_processing
 del _io

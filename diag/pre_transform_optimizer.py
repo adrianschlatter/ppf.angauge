@@ -3,8 +3,8 @@ import numpy as np
 import matplotlib.pyplot as pl
 from matplotlib.widgets import Button, Slider
 from matplotlib.gridspec import GridSpec
-import ppf.watermeter as wm
-from ppf.watermeter._image_processing import (
+import ppf.angauge as wm
+from ppf.angauge._image_processing import (
     to_gray, to_bw, to_polar, flood_fill)
 from scipy.optimize import least_squares
 

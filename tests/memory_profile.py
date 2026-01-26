@@ -4,7 +4,7 @@ test command-line tool
 """
 
 from pathlib import Path
-from ppf.watermeter import read_config, read_meter, numeric_from_readings
+from ppf.angauge import read_config, read_meter, numeric_from_readings
 
 
 if __name__ == "__main__":

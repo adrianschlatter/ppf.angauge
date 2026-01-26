@@ -50,7 +50,7 @@ We learn:
 
 * The 0.01x hand in the original picture is a bit low. It points to ~62 liters.
   It should point to 65 liters.
-* ppf.watermeter reads it as even lower: Almost exactly at 60 liters.
+* ppf.angauge reads it as even lower: Almost exactly at 60 liters.
 * The 0.001x hand reads 5 liters. But is this now 55 liters or 65 liters? With
   0x01x at 60 liters, both are equally likely.
 

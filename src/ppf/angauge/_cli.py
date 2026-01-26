@@ -3,8 +3,8 @@
 """
 
 from argparse import ArgumentParser
-from ppf.watermeter import read_meter, read_config, mle
-from ppf.watermeter._io import read_bmp_rectangle
+from ppf.angauge import read_meter, read_config, mle
+from ppf.angauge._io import read_bmp_rectangle
 from sys import stderr
 
 
