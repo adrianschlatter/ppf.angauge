@@ -1,3 +1,4 @@
+from __future__ import annotations
 import numpy as np
 from .image_processing import flood_fill, to_polar, to_gray, to_bw
 

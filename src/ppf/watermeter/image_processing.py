@@ -1,3 +1,4 @@
+from __future__ import annotations
 import numpy as np
 from skimage.color import rgb2hsv
 from skimage.filters import threshold_local

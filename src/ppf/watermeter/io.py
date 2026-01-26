@@ -1,3 +1,4 @@
+from __future__ import annotations
 import mmap
 import struct
 import numpy as np
