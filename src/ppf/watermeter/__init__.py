@@ -7,9 +7,9 @@ Convert images of watermeters to numerical readings.
 """
 
 try:
-    from importlib.metadata import version
-except ImportError:
     from importlib_metadata import version
+except ImportError:
+    from importlib.metadata import version
 
 
 __version__ = version(__name__)
