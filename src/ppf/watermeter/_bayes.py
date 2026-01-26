@@ -76,7 +76,26 @@ def initial_guess(readings: list[dict]) -> float:
 
 @export
 def mle(readings: list[dict]) -> (float, float):
-    """Maximum likelihood of density function defined by readings."""
+    """
+    Return maximum likelihood of density function defined by readings.
+
+    Parameters
+    ----------
+
+    readings : list of dict
+        List of readings, each reading is a dictionary with keys 'value' and
+        'sigma'. 'value' is the digit value read from the indicator [0, 10),
+        'sigma' is the standard error of the reading.
+
+    Returns
+    -------
+
+    s_max : float
+        Maximum likelihood estimate given the readings.
+
+    y_max : float
+        Log-likelihood value at s_max.
+    """
 
     s_max = initial_guess(readings)
     bmi_0 = brillouin_zone(s_max, readings)

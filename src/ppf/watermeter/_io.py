@@ -16,15 +16,43 @@ except ModuleNotFoundError:
 @export
 def read_config(config_path: str) -> list[dict]:
     """
-    Reads the configuration file for clock positions.
+    Read TOML configuration file.
 
-    Args:
-        config_path (str): Path to the configuration file.
+    The configuration file specifies:
 
-    Returns:
-        list of dict: A list of dictionaries, each containing the keys 'x0',
-        'y0', 'w', and 'phi'. Index in list is the clock index: Lowest-value
-        clock is index 0, next is index 1, etc.
+    * for each indicator:
+        - position (upper-left corner)
+        - rotation
+        - size (of square)
+        - sine- and cosine correction coefficients
+    * HSV to grayscale conversion coefficients
+    * Grayscale to black-and-white conversion method and parameters
+    * Multiplier for the finest indicator
+
+    Parameters
+    ----------
+
+    config_path (str): Path to the configuration file.
+
+
+    Returns
+    -------
+
+    dict:
+        Dictionary with keys (if present in file): 'hsv_to_gray',
+        'gray_to_bw', 'multiplier', 'indicators'.
+
+        'indicators' is a list of dictionaries, each containing the keys 'x0',
+        'y0', 'w', 'phi', 'Asin', 'Acos'.
+
+        'hsv_to_gray' is a dictionary with keys 'c0', 'c1', 'c2', 'c3', the
+        multiplier coefficients for 1, H, S, and V components.
+
+        'gray_to_bw' is a dictionary with keys 'method', 'offset', 'blocksize',
+        specifying the binarization method and parameters.
+
+        Note: It will also return any other object found in the toml file, even
+        though not used by the package.
     """
     with open(config_path, 'rb') as f:
         config = tomllib.load(f)

@@ -99,9 +99,9 @@ def read_meter(img: np.ndarray, config: list[dict]) -> list[dict]:
     -------
 
     list[dict]:
-        List of dictionaries, each containing 'value' and 'sigma'
-        for each clock in the meter. 'value' is the estimated digit value,
-        'sigma' is the estimated uncertainty.
+        List of dictionaries, one for each indicator. Each dictionary has
+        'value' and 'sigma': 'value' is the estimated digit value, 'sigma'
+        is the estimated uncertainty.
     """
 
     reading = []
