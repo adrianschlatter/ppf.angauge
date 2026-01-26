@@ -2,7 +2,14 @@ from __future__ import annotations
 import mmap
 import struct
 import numpy as np
-import tomllib
+
+try:
+    import tomllib
+except ModuleNotFoundError:
+    try:
+        import tomli as tomllib
+    except ImportError:
+        raise ImportError('This package requires either tomllib or tomli')
 
 
 def read_config(config_path: str) -> list[dict]:
