@@ -66,7 +66,7 @@ Activate an environment that does not have a (development-) installation of
 this package. Run
 
 ```
-pip install ppf.sample
+pip install ppf.angauge
 ```
 
 This should download and install the version you've just released.

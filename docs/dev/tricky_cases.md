@@ -22,7 +22,7 @@ Sometimes, the watermeter readings toggle back and forth between two values.
 This is particularly obvious when the watermeter is actually not turning.
 
 The picture below shows an example where the reading toggles between ~0.05509 m3
-and ~0.06509 m3. As a humen, I say 0.06509 m3 is correct.
+and ~0.06509 m3. As a human, I say 0.06509 m3 is correct.
 
 ![watermeter](../assets/watermeter_toggling_1.jpg)
 

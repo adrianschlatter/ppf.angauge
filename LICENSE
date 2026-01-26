@@ -1,7 +1,6 @@
-ppf.needle is a Python package to read (images of) the needle of an analog
-meter.
+ppf.angauge is a Python package to read values from images of an analog gauge.
 
-Copyright (c) 2025 Adrian Schlatter
+Copyright (c) 2025, 2026 Adrian Schlatter
 
 MIT License
 

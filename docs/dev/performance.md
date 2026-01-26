@@ -6,7 +6,7 @@ Thoughts on performance:
 * use memory-mapping for reading images (saves memory)
 * flood-fill algorithm:
     - we follow the pixels we are actually interested in
-    - don't do all the image processing and -tranformation, and *then* run the
+    - don't do all the image processing and -transformation, and *then* run the
       flood-fill algorithm. Instead, start from an empty polar grid (not even
       allocated yet, just a thought model of a coordinate system). Then,
       calculate the pixel as soon as the flood-fill algorithm requests it.
