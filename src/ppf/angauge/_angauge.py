@@ -1,10 +1,11 @@
 from __future__ import annotations
 import numpy as np
+from numpy.typing import NDArray
 from ._image_processing import flood_fill, to_polar, to_gray, to_bw
 from ._utils import export
 
 
-def read_indicator(img_hand: np.ndarray,
+def read_indicator(img_hand: NDArray,
                    to_gray_params={'c0': 0, 'c1': 0, 'c2': 0, 'c3': 1},
                    to_bw_params={'method': 'global', 'offset': 128}
                    ) -> tuple[float, float]:
@@ -81,7 +82,7 @@ def read_indicator(img_hand: np.ndarray,
 
 
 @export
-def read_gauge(img: np.ndarray, config: list[dict]) -> list[dict]:
+def read_gauge(img: NDArray, config: list[dict]) -> list[dict]:
     """
     Reads state of a meter with multiple clock-type indicators from an image.
 
