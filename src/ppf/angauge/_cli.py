@@ -3,7 +3,7 @@
 """
 
 from argparse import ArgumentParser
-from ppf.angauge import read_meter, read_config, mle
+from ppf.angauge import read_gauge, read_config, mle
 from ppf.angauge._io import read_bmp_rectangle
 from sys import stderr
 
@@ -28,7 +28,7 @@ def main():
             raise ValueError(f"Failed to read image {img_path}")
 
         try:
-            readings = read_meter(img, config)
+            readings = read_gauge(img, config)
         except ValueError:
             print(f'{img_path}, nan')
             continue

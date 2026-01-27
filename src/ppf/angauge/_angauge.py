@@ -81,7 +81,7 @@ def read_indicator(img_hand: np.ndarray,
 
 
 @export
-def read_meter(img: np.ndarray, config: list[dict]) -> list[dict]:
+def read_gauge(img: np.ndarray, config: list[dict]) -> list[dict]:
     """
     Reads state of a meter with multiple clock-type indicators from an image.
 

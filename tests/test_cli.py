@@ -11,7 +11,7 @@ from ppf.angauge import _cli as cli
 def test_known_img_watermeter(capfd):
     DATADIR = Path(__file__).parent / 'data'
     with patch('sys.argv',
-               ['read_meter',
+               ['read_gauge',
                 str(DATADIR / 'config_watermeter.toml'),
                 str(DATADIR / '2025-08-20T00:00:10.059926+02:00.bmp')]):
         cli.main()
@@ -22,7 +22,7 @@ def test_known_img_watermeter(capfd):
 def test_known_img_thermometer(capfd):
     DATADIR = Path(__file__).parent / 'data'
     with patch('sys.argv',
-               ['read_meter',
+               ['read_gauge',
                 str(DATADIR / 'config_thermometer.toml'),
                 str(DATADIR / '2026-01-02T06:30:10.662715+01:00.bmp')]):
         cli.main()

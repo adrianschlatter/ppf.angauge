@@ -18,7 +18,7 @@ Example
 -------
 
 ```python
-from ppf.angauge import read_config, read_meter, mle
+from ppf.angauge import read_config, read_gauge, mle
 from matplotlib.pyplot import imread
 
 # read configuration file
@@ -28,7 +28,7 @@ config = read_config('path/to/config.toml')
 img = imread('path/to/meter_image.jpg')
 
 # read the meter indicators
-readings = read_meter(img, config)
+readings = read_gauge(img, config)
 
 # compute maximum likelihood estimate of the meter state
 s_ml, y_ml = mle(readings)
@@ -60,7 +60,7 @@ multiplier = 0.0001
 ```
 
 `hsv_to_gray` specifies the coefficients for converting the image to
-grayscale. `read_meter()` converts the image from RGB color space to HSV
+grayscale. `read_gauge()` converts the image from RGB color space to HSV
 (Hue, Saturation, Value) color space and then computes a weighted sum of the
 HSV components:
 
