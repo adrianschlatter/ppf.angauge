@@ -1,0 +1,28 @@
+# general things to ignore
+build/
+dist/
+*.egg-info/
+*.egg
+*.py[cod]
+__pycache__/
+*.so
+*~
+
+# due to using tox and pytest
+.tox
+.cache
+
+# due to using coverage
+.coverage
+htmlcov/
+coverage.lcov
+
+# due to Mac:
+**/.DS_Store
+
+# experimental code
+experimental/
+
+# extended (local) test data
+tests/data/2025-08-20T*.jpg
+tests/data/2025-08-20T*.bmp

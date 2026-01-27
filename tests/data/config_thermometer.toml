@@ -1,0 +1,6 @@
+hsv_to_gray = {c0=1, c1=0, c2=0, c3=-1}
+gray_to_bw = {method="local", offset=-20, blocksize=31}
+indicators = [
+    {x0=99, y0=66, w=163, phi=56.7},
+  ]
+multiplier = 14.1
