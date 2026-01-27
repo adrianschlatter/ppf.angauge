@@ -16,7 +16,7 @@ def to_gray(img: np.ndarray,
         c0, c1, c2, c3: Weights for constant term, H, S, V components
 
     Returns:
-        Grayscale image as numpy ndarray of shape (h, w) with dtype 'uint8
+        Grayscale image as numpy ndarray of shape (h, w) with dtype 'uint8'
     """
     img_hsv = rgb2hsv(img / 256.)
     img_gray = (c0
