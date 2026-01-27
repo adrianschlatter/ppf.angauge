@@ -295,7 +295,7 @@ def readings_from_array(arr_hands, arr_sigmas):
 
 if __name__ == '__main__':
     pl.close('all')
-    df = pd.read_csv('../experimental/shots_run1/readings_A_in_deg.csv',
+    df = pd.read_csv('../experimental/shots_run1/readings_negrot.csv',
                      names=['date', 's',
                             'E', 'Z', 'H', 'T',
                             'dE', 'dZ', 'dH', 'dT'],

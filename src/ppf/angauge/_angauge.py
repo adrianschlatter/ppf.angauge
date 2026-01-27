@@ -112,7 +112,7 @@ def read_meter(img: np.ndarray, config: list[dict]) -> list[dict]:
         theta, dtheta = read_indicator(img_indicator, config['hsv_to_gray'],
                                        config['gray_to_bw'])
         # compensate known rotation of clock:
-        theta += cfg['phi'] / 180. * np.pi
+        theta -= cfg['phi'] / 180. * np.pi
 
         # compensate elliptical distortion:
         theta += getattr(cfg, 'Asin', 0) / 180. * np.pi * np.sin(theta)
