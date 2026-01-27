@@ -116,8 +116,8 @@ def read_gauge(img: NDArray, config: list[dict]) -> list[dict]:
         theta -= cfg['phi'] / 180. * np.pi
 
         # compensate elliptical distortion:
-        theta += getattr(cfg, 'Asin', 0) / 180. * np.pi * np.sin(theta)
-        theta += getattr(cfg, 'Acos', 0) / 180. * np.pi * np.cos(theta)
+        theta += cfg.get('Asin', 0) / 180. * np.pi * np.sin(theta)
+        theta += cfg.get('Acos', 0) / 180. * np.pi * np.cos(theta)
 
         # convert to digit:
         digit = theta / 2 / np.pi * 10
