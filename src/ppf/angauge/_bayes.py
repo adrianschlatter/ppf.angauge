@@ -1,10 +1,11 @@
 from __future__ import annotations
 import numpy as np
+from numpy.typing import NDArray
 from ._utils import export
 
 
-def loglikelihood(s: np.ndarray,
-                  readings: list[dict], offset: float = 0.) -> np.ndarray:
+def loglikelihood(s: NDArray,
+                  readings: list[dict], offset: float = 0.) -> NDArray:
     # The likelihood on the circle is the sum of the likelihoods in all
     # "Brillouin" zones of
     # the unwrapped likelihood. Wrapping means calculating an infinite sum over
@@ -25,7 +26,7 @@ def loglikelihood(s: np.ndarray,
     return p
 
 
-def brillouin_zone(s: np.ndarray, readings: list[dict]) -> np.ndarray:
+def brillouin_zone(s: NDArray, readings: list[dict]) -> NDArray:
     # returns the integers m_k so that:
     # s * 10**-k - readings[k][0] - m_k * 10 is in [-5, 5]
     # in other words: To replace the modulo in wm.digit_centered() by a
@@ -34,14 +35,14 @@ def brillouin_zone(s: np.ndarray, readings: list[dict]) -> np.ndarray:
                      for i, r in enumerate(readings)])
 
 
-def digit_centered(s: np.ndarray, k: int, readings: list[dict],
-                   bmi: np.ndarray, offset=0) -> np.ndarray:
+def digit_centered(s: NDArray, k: int, readings: list[dict],
+                   bmi: NDArray, offset=0) -> NDArray:
     # the digit_centered function that accepts known brillouin zones
     # instead of using a modulo operation as does wm.digit_centered()
     return s * 10**-k - readings[k]['value'] - bmi[k] * 10
 
 
-def ymax_brillouin_zone(readings: list[dict], bmi: np.ndarray) -> float:
+def ymax_brillouin_zone(readings: list[dict], bmi: NDArray) -> float:
     assert len(readings) == len(bmi)
 
     values = np.array([r['value'] for r in readings])
@@ -56,7 +57,7 @@ def ymax_brillouin_zone(readings: list[dict], bmi: np.ndarray) -> float:
     return -0.5 * (C + b.T @ W @ b - (t.T @ W @ b)**2 / (t.T @ W @ t))
 
 
-def smax_brillouin_zone(readings: list[dict], bmi: np.ndarray) -> float:
+def smax_brillouin_zone(readings: list[dict], bmi: NDArray) -> float:
     assert len(readings) == len(bmi)
 
     values = np.array([r['value'] for r in readings])
