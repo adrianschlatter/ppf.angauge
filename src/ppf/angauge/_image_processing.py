@@ -1,13 +1,14 @@
 from __future__ import annotations
 import numpy as np
+from numpy.typing import NDArray
 from skimage.color import rgb2hsv
 from skimage.filters import threshold_local
 
 __all__ = []
 
 
-def to_gray(img: np.ndarray,
-            c0: float, c1: float, c2: float, c3: float) -> np.ndarray:
+def to_gray(img: NDArray,
+            c0: float, c1: float, c2: float, c3: float) -> NDArray:
     """
     Convert RGB image to grayscale using weighted HSV components.
 
@@ -26,8 +27,8 @@ def to_gray(img: np.ndarray,
     return np.clip(img_gray * 256, 0, 255).astype('uint8')
 
 
-def to_bw(img_gray: np.ndarray, method: str, offset: float,
-          blocksize: int = None, invert: bool = False) -> np.ndarray:
+def to_bw(img_gray: NDArray, method: str, offset: float,
+          blocksize: int = None, invert: bool = False) -> NDArray:
     """
     Binarize grayscale image using global or local thresholding.
 
@@ -54,8 +55,8 @@ def to_bw(img_gray: np.ndarray, method: str, offset: float,
     return img_bw if not invert else ~img_bw
 
 
-def to_polar(img: np.ndarray, n_r: int, n_theta: int,
-             r_min: float, r_max: float) -> np.ndarray:
+def to_polar(img: NDArray, n_r: int, n_theta: int,
+             r_min: float, r_max: float) -> NDArray:
     h_half, w_half = 0.5 * img.shape[0], 0.5 * img.shape[1]
     h_max, w_max = img.shape[0] - 1, img.shape[1] - 1
     r = np.linspace(r_min, r_max, n_r, endpoint=True).reshape(-1, 1)
@@ -71,8 +72,8 @@ def to_polar(img: np.ndarray, n_r: int, n_theta: int,
     return img[Y, X]
 
 
-def flood_fill(img: np.ndarray,
-               points: set[tuple[int, int]]) -> np.ndarray[bool]:
+def flood_fill(img: NDArray,
+               points: set[tuple[int, int]]) -> NDArray[bool]:
 
     def uncover(pnt: tuple[int, int]) -> bool:
         i, j = pnt
