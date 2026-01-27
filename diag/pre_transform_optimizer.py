@@ -246,7 +246,7 @@ class App:
             self.ax_color[3 - i].imshow(crop)
             self.ax_color[3 - i].set_xticks([])
             self.ax_color[3 - i].set_yticks([])
-            gray = to_gray(crop, **self.cfgs['to_gray'])
+            gray = to_gray(crop, **self.cfgs['hsv_to_gray'])
             self.ax_handscale[3 - i].cla()
             self.ax_handscale[3 - i].imshow(gray, cmap='gray', vmin=0, vmax=1)
             self.ax_handscale[3 - i].set_xticks([])
@@ -256,7 +256,7 @@ class App:
             rimg = min(gray.shape) / 2
             n_r, n_theta = 32, 64
 
-            img_bw = to_bw(gray, **self.cfgs['to_bw'])
+            img_bw = to_bw(gray, **self.cfgs['gray_to_bw'])
             img_polar_bw = to_polar(img_bw, n_r, n_theta,
                                     r_min * rimg, r_max * rimg)
 
