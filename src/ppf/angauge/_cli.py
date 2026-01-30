@@ -5,7 +5,6 @@
 from argparse import ArgumentParser
 from ppf.angauge import read_gauge, read_config, mle
 from ppf.angauge._io import read_bmp_rectangle
-from sys import stderr
 
 
 def main():
@@ -31,9 +30,6 @@ def main():
             readings = read_gauge(img, config)
         except ValueError:
             print(f'{img_path}, nan')
-            continue
-        except FileNotFoundError:
-            print(f'File not found: {img_path}', file=stderr)
             continue
 
         # Find maximum likelihood meter state given the readings:
