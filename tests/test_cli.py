@@ -4,6 +4,7 @@ test command-line tool
 """
 
 from unittest.mock import patch
+import pytest
 from pathlib import Path
 from ppf.angauge import _cli as cli
 
@@ -28,3 +29,25 @@ def test_known_img_thermometer(capfd):
         cli.main()
         out, err = capfd.readouterr()
         assert '49.2' in out.strip()
+
+
+def test_invalid_path(capfd):
+    DATADIR = Path(__file__).parent / 'data'
+    with patch('sys.argv',
+               ['read_gauge',
+                str(DATADIR / 'config_thermometer.toml'),
+                str(DATADIR / 'nonexistant.bmp')]):
+
+        with pytest.raises(FileNotFoundError):
+            cli.main()
+
+
+def test_invalid_img(capfd):
+    DATADIR = Path(__file__).parent / 'data'
+    with patch('sys.argv',
+               ['read_gauge',
+                str(DATADIR / 'config_thermometer.toml'),
+                str(DATADIR / 'config_thermometer.toml')]):
+
+        with pytest.raises(ValueError):
+            cli.main()
