@@ -73,6 +73,8 @@ def read_indicator(img_hand: NDArray,
                              theta_peak + 0.5 * np.pi,
                              n_theta // 2, endpoint=False)
 
+    if theta_dist.sum() == 0:
+        raise ValueError("No hand pixels found in indicator image")
     mu_theta = (theta_dist * theta_axis).sum() / theta_dist.sum()
     sigma_theta = np.sqrt(
                         ((theta_dist * (theta_axis - mu_theta)**2).sum()
