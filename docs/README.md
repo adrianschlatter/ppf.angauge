@@ -61,6 +61,34 @@ readings = read_gauge(img, config)
 value, errorbar = mle(readings)
 ```
 
+If you have a large set of images to process, you may value GNU`s `parallel`
+tool. Leverage it as follows:
+
+```shell
+> printf "%s\0" *.bmp | parallel -0 -L 64 read_gauge <config.toml> \
+  | sort | tee -a readings.csv
+```
+
+Let's break this down step by step:
+
+* `printf "%s\0" *.bmp` generates a null-separated list of all `.bmp` files in
+  the current directory. The null-separation avoids problems with filenames
+  that contain spaces or special characters. Furthermore, `printf` avoids
+  problems with (very) long argument lists: If you have a really large number
+  of images, just using `ls *.bmp` may result in `zsh: argument list too long`.
+* `parallel -0 -L 64 read_gauge <config.toml>` runs `read_gauge <config.toml>
+  <image>` for each image in the list. `-0` tells `parallel` that the input
+  list is null-separated. `-L 64` tells `parallel` to take 64 input arguments
+  at a time and give them as arguments to a single `read_gauge` call. This is
+  much more efficient than running `read_gauge` once per image, because it
+  avoids the overhead of loading the python interpreter for each image.
+  `parallel` will use all CPU cores in your system. If you want it to use less,
+  use the `-j` argument.
+* `sort`: Sorts the output of `read_gauge`
+* `tee -a readings.csv`: Print results on screen but simultaneously also append
+  them to `readings.csv`
+
+
 ## Configuration
 
 `read_gauge` needs a bit of configuration to find the indicators in your image
