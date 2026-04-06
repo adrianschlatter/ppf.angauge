@@ -6,11 +6,12 @@ from ._utils import export
 
 try:
     import tomllib
-except ModuleNotFoundError:
-    try:
-        import tomli as tomllib
-    except ImportError:
-        raise ImportError('This package requires either tomllib or tomli')
+except ModuleNotFoundError:                                 # pragma: no cover
+    try:                                                    # pragma: no cover
+        import tomli as tomllib                             # pragma: no cover
+    except ImportError:                                     # pragma: no cover
+        raise ImportError(                                  # pragma: no cover
+          'This package requires either tomllib or tomli')  # pragma: no cover
 
 
 @export
