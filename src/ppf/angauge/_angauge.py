@@ -5,6 +5,9 @@ from ._image_processing import flood_fill, to_polar, to_gray, to_bw
 from ._utils import export
 
 
+__all__ = []
+
+
 def read_indicator(img_hand: NDArray,
                    to_gray_params={'c0': 0, 'c1': 0, 'c2': 0, 'c3': 1},
                    to_bw_params={'method': 'global', 'offset': 128}
@@ -83,8 +86,56 @@ def read_indicator(img_hand: NDArray,
     return (mu_theta % (2 * np.pi), sigma_theta)
 
 
+# @export
+# def read_gauge(img: NDArray, config: list[dict]) -> list[dict]:
+#     """
+#     Reads state of a meter with multiple clock-type indicators from an image.
+
+#     Parameters
+#     ----------
+
+#     img : np.ndarray-like
+#         Image (3D numpy array, h x w x color) of the entire meter.
+
+#     config : dict
+#         Configuration for image processing and clock positions, as returned by
+#         read_config().
+
+#     Returns
+#     -------
+
+#     list[dict]:
+#         List of dictionaries, one for each indicator. Each dictionary has
+#         'value' and 'sigma': 'value' is the estimated digit value, 'sigma'
+#         is the estimated uncertainty.
+#     """
+
+#     reading = []
+#     indicators = config['indicators']
+#     for i, cfg in enumerate(indicators):
+#         img_indicator = img[cfg['y0']: cfg['y0'] + cfg['w'],
+#                             cfg['x0']:(cfg['x0'] + cfg['w'])]
+#         theta, dtheta = read_indicator(img_indicator, config['hsv_to_gray'],
+#                                        config['gray_to_bw'])
+#         # compensate known rotation of clock:
+#         theta -= cfg['phi'] / 180. * np.pi
+
+#         # compensate elliptical distortion:
+#         theta += cfg.get('Asin', 0) / 180. * np.pi * np.sin(theta)
+#         theta += cfg.get('Acos', 0) / 180. * np.pi * np.cos(theta)
+
+#         # convert to digit:
+#         digit = theta / 2 / np.pi * 10
+#         ddigit = dtheta / 2 / np.pi * 10
+#         digit = digit % 10
+
+#         reading.append({'value': digit, 'sigma': ddigit})
+
+#     return reading
+
+
 @export
-def read_gauge(img: NDArray, config: list[dict]) -> list[dict]:
+def read_multi_gauge(img: NDArray, config: list[dict]) -> list[dict]:
     """
     Reads state of a meter with multiple clock-type indicators from an image.
 
@@ -97,35 +148,97 @@ def read_gauge(img: NDArray, config: list[dict]) -> list[dict]:
     config : dict
         Configuration for image processing and clock positions, as returned by
         read_config().
+    """
+    readings = []
+    for i, cfg in enumerate(config['indicators']):
+        phi = cfg.get('phi', 0)
+        del cfg['phi']
+        reading = read_single_gauge(img, theta_min=phi,
+                                    hsv_to_gray=config['hsv_to_gray'],
+                                    gray_to_bw=config['gray_to_bw'],
+                                    **cfg)
+        reading['value'] = reading['value'] % 10
+        readings.append(reading)
+
+    return readings
+
+
+read_gauge = read_multi_gauge
+__all__.append('read_gauge')
+
+
+@export
+def read_single_gauge(
+            img: NDArray, x0: int = 0, y0: int = 0, w: int = None,
+            hsv_to_gray: dict = {'c0': 0, 'c1': 0, 'c2': 0, 'c3': 1},
+            gray_to_bw: dict = {'method': 'global', 'offset': 128},
+            Asin: float = 0, Acos: float = 0,
+            theta_min: float = 0, theta_range: float = 360.,
+            value_min: float = 0, value_max: float = 10) -> dict:
+    """
+    Reads state of a meter with a single clock-type indicator from an image.
+
+    Parameters
+    ----------
+
+    img : np.ndarray-like
+        Image (3D numpy array, h x w x color) of the entire meter.
+
+    x0, y0 : int
+        Coordinates of top-left corner of the indicator in the image.
+
+    w : int
+        Width of the indicator in pixels. Indicator is assumed to be square.
+
+    hsv_to_gray : dict
+        Parameters for to_gray() function.
+        gray = c0 + c1 * h + c2 * s + c3 * v.
+
+    gray_to_bw : dict
+        Parameters for to_bw() function. For example, {'method': 'global',
+        'offset': 128} for global thresholding with offset 128.
+
+    Asin, Acos : float
+        Parameters for compensation of elliptical distortion. The angle is
+        compensated as phi += Asin * sin(phi) + Acos * cos(phi), where
+        phi is theta - theta_min, i.e. the angle relative to the minimum value
+        of the meter. Asin and Acos are given in degrees.
+
+    theta_min, theta_max : float
+        Minimum and maximum angle of the hand in degrees, corresponding to
+        min_value and max_value, respectively.
+
+    value_min, value_max : float
+        Minimum and maximum value of the meter, corresponding to theta_min and
+        theta_max, respectively.
 
     Returns
     -------
 
-    list[dict]:
-        List of dictionaries, one for each indicator. Each dictionary has
-        'value' and 'sigma': 'value' is the estimated digit value, 'sigma'
-        is the estimated uncertainty.
+    dict:
+        Dictionary with 'value' and 'sigma': 'value' is the estimated meter
+        value, 'sigma' is the estimated uncertainty.
     """
+    # we use degrees in user-facing parameters, but use radians internally:
+    theta_min, theta_range, Asin, Acos = \
+        map(lambda x: x / 180. * np.pi, (theta_min, theta_range, Asin, Acos))
 
-    reading = []
-    indicators = config['indicators']
-    for i, cfg in enumerate(indicators):
-        img_indicator = img[cfg['y0']: cfg['y0'] + cfg['w'],
-                            cfg['x0']:(cfg['x0'] + cfg['w'])]
-        theta, dtheta = read_indicator(img_indicator, config['hsv_to_gray'],
-                                       config['gray_to_bw'])
-        # compensate known rotation of clock:
-        theta -= cfg['phi'] / 180. * np.pi
+    img_indicator = img[y0:y0 + w, x0:x0 + w]
+    theta, dtheta = read_indicator(img_indicator, hsv_to_gray, gray_to_bw)
 
-        # compensate elliptical distortion:
-        theta += cfg.get('Asin', 0) / 180. * np.pi * np.sin(theta)
-        theta += cfg.get('Acos', 0) / 180. * np.pi * np.cos(theta)
+    # compensate known rotation of clock. After this, theta=0 corresponds to
+    # the hand pointing to the minimum value of the meter:
+    theta -= theta_min
 
-        # convert to digit:
-        digit = theta / 2 / np.pi * 10
-        ddigit = dtheta / 2 / np.pi * 10
-        digit = digit % 10
+    # now that theta_min is rotated to 0, theta_max = theta_range:
+    theta_max = theta_range
 
-        reading.append({'value': digit, 'sigma': ddigit})
+    # compensate elliptical distortion:
+    theta += Asin * np.sin(theta)
+    theta += Acos * np.cos(theta)
 
-    return reading
+    # convert to value:
+    value = theta / theta_max * (value_max - value_min) + value_min
+    dvalue = dtheta / theta_max * (value_max - value_min)
+
+    return {'value': value, 'sigma': dvalue}
