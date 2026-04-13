@@ -45,7 +45,7 @@ second. For more information on command line options, see `read_gauge --help`.
 The following code snippet shows how to do the same in python:
 
 ```python
-from ppf.angauge import read_config, read_gauge, mle
+from ppf.angauge import read_config, read_multi_gauge, mle
 from matplotlib.pyplot import imread
 
 # read configuration file:
@@ -55,7 +55,7 @@ config = read_config('config.toml')
 img = imread('image.jpg')
 
 # read meter hands from image:
-readings = read_gauge(img, config)
+readings = read_multi_gauge(img, config)
 
 # determine most likely meter state given readings:
 value, errorbar = mle(readings)
@@ -154,6 +154,24 @@ need them, read off the register manually once, and from then on track
 overflows of the analog digit indicators to determine the value of the
 register.)
 
+`ppf.angauge` also reads your single-indicator meters such as thermometers or
+pressure gauges.
+
+![thermometer](./assets/thermometer.jpg)
+
+The configuration looks like this:
+
+```toml
+hsv_to_gray = {c0=1, c1=0, c2=0, c3=-1}
+gray_to_bw = {method="local", offset=-20, blocksize=31}
+single_gauge = {
+    x0=99, y0=66, w=163, theta_min=56.7, theta_range=325.,
+    value_min=0., value_max=120.
+  }
+```
+
+In python, `ppf.angauge.read_single_gauge(...)` helps you out.
+
 
 # Installation
 
@@ -183,4 +201,5 @@ everyone to adhere to it, just make sure you do as well.
 
 # Change Log
 
-* 0.1:	Initial demo.
+* 0.2.0:    read_single_gauge() / read_multi_gauge()
+* 0.1.0:	Initial demo.
