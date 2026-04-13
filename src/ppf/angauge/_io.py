@@ -6,11 +6,30 @@ from ._utils import export
 
 try:
     import tomllib
-except ModuleNotFoundError:
-    try:
-        import tomli as tomllib
-    except ImportError:
-        raise ImportError('This package requires either tomllib or tomli')
+except ModuleNotFoundError:                                 # pragma: no cover
+    try:                                                    # pragma: no cover
+        import tomli as tomllib                             # pragma: no cover
+    except ImportError:                                     # pragma: no cover
+        raise ImportError(                                  # pragma: no cover
+          'This package requires either tomllib or tomli')  # pragma: no cover
+
+
+def normalize_indicator_cfg(local_cfg, global_cfg):
+    """
+    Inherit properties in local_cfg from global_cfg if missing. Ensure no
+    missing required properties.
+    """
+    # inherit properties local <= global <= default:
+    for prop in ['hsv_to_gray', 'gray_to_bw', 'phi', 'theta_min',
+                 'theta_range', 'value_min', 'value_max']:
+        local_cfg[prop] = local_cfg.get(prop, global_cfg.get(prop, None))
+        if local_cfg[prop] is None:
+            del local_cfg[prop]
+
+    # check that all required properties are present:
+    for prop in ['hsv_to_gray', 'gray_to_bw']:
+        if prop not in local_cfg:
+            raise ValueError(f"Missing '{prop}' key in config file")
 
 
 @export
@@ -56,6 +75,26 @@ def read_config(config_path: str) -> list[dict]:
     """
     with open(config_path, 'rb') as f:
         config = tomllib.load(f)
+
+    # normalize config
+
+    # we either have a single_gauge or multi_gauge config:
+    if 'indicator' in config and 'indicators' in config:
+        raise ValueError("Config file cannot contain both 'indicator' and "
+                         "'indicators' keys")
+    elif 'indicator' not in config and 'indicators' not in config:
+        raise ValueError("Neither 'indicator' nor 'indicators' key "
+                         "found in config file")
+    elif 'indicator' in config:
+        normalize_indicator_cfg(config['indicator'], config)
+    else:  # multi_gauge config:
+        for i, indicator in enumerate(config['indicators']):
+            normalize_indicator_cfg(config['indicators'][i], config)
+
+    for prop in ['hsv_to_gray', 'gray_to_bw', 'phi', 'theta_min',
+                 'theta_range', 'value_min', 'value_max']:
+        if prop in config:
+            del config[prop]
 
     return config
 

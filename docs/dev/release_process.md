@@ -5,17 +5,17 @@ Make sure that you:
 * updated the changelog (/docs/README.md)
 * checked the README for pypi (/docs/README_pypi.md)
 
-## Pull-Request into master
+## Pull-Request into main
 
 * Push changes to Github
-* Create PR into master
+* Create PR into main
 * Github will run workflows (tox in our case)
 * Merge PR when all is well (merge commit, not squash or fast forward)
 
-A commit in master is a release. Pull the new commit and tag it:
+A commit in main is a release. Pull the new commit and tag it:
 
 ```shell
-git checkout master
+git checkout main
 git tag vX.Y.Z
 ```
 

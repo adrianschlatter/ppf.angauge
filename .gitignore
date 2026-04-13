@@ -17,12 +17,18 @@ __pycache__/
 htmlcov/
 coverage.lcov
 
+# due to using crush
+.crush.json
+
 # due to Mac:
 **/.DS_Store
 
 # experimental code
 experimental/
+_archive/
 
 # extended (local) test data
 tests/data/2025-08-20T*.jpg
 tests/data/2025-08-20T*.bmp
+tests/data/2026-01-02*.jpg
+tests/data/*.xcf

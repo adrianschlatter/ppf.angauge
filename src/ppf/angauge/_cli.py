@@ -3,9 +3,17 @@
 """
 
 from argparse import ArgumentParser
-from ppf.angauge import read_gauge, read_config, mle
+from ppf.angauge import read_single_gauge, read_multi_gauge, read_config, mle
 from ppf.angauge._io import read_bmp_rectangle
-from sys import stderr
+
+
+def load_img_or_raise(img_path):
+    try:
+        img = read_bmp_rectangle(img_path, x=0, y=0, w=0, h=0)
+    except ValueError:
+        raise ValueError(f"Failed to read image {img_path}")
+
+    return img
 
 
 def main():
@@ -19,35 +27,60 @@ def main():
                         help="print hand readings")
     args = parser.parse_args()
 
+    # read the config file:
     config = read_config(args.config_path)
 
-    for img_path in args.image_path:
-        try:
-            img = read_bmp_rectangle(img_path, x=0, y=0, w=0, h=0)
-        except ValueError:
-            raise ValueError(f"Failed to read image {img_path}")
+    # check for incompatible arguments:
+    if args.hands and 'indicators' not in config:
+        print("Warning: --hands flag is ignored for single_gauge config")
 
-        try:
-            readings = read_gauge(img, config)
-        except ValueError:
-            print(f'{img_path}, nan')
-            continue
-        except FileNotFoundError:
-            print(f'File not found: {img_path}', file=stderr)
-            continue
+    # Apply units
+    multiplier = 1.
+    if args.multiplier is not None:
+        multiplier = args.multiplier
+    elif 'multiplier' in config:
+        multiplier = config['multiplier']
 
-        # Find maximum likelihood meter state given the readings:
-        s_ml, y_ml = mle(readings)
+    # process images:
+    if 'indicators' in config:
+        for img_path in args.image_path:
+            img = load_img_or_raise(img_path)
 
-        # Apply units
-        if args.multiplier is not None:
-            s_ml *= args.multiplier
-        elif 'multiplier' in config:
-            s_ml *= config['multiplier']
+            try:
+                readings = read_multi_gauge(img, config['indicators'])
+            except ValueError:
+                print(f'{img_path}, nan')
+                continue
 
-        if args.hands:
-            hand_readings = ', '.join([f'{r["value"]:.2f}' for r in readings])
-            sigmas = ', '.join([f'{r["sigma"]:.3f}' for r in readings])
-            print(f'{img_path}, {s_ml:.5f}, {hand_readings}, {sigmas}')
-        else:
-            print(f'{img_path}, {s_ml:.5f}')
+            # Find maximum likelihood meter state given the readings:
+            value, y_ml = mle(readings)
+
+            # Apply units:
+            value *= multiplier
+
+            # Print hand readings if requested:
+            if args.hands:
+                hand_readings = ', '.join([f'{r["value"]:.2f}'
+                                           for r in readings])
+                sigmas = ', '.join([f'{r["sigma"]:.3f}' for r in readings])
+                print(f'{img_path}, {value:.5f}, {hand_readings}, {sigmas}')
+            # Otherwise, just print the final meter reading:
+            else:
+                print(f'{img_path}, {value:.5f}')
+    else:  # single_gauge config:
+        for img_path in args.image_path:
+            img = load_img_or_raise(img_path)
+
+            try:
+                reading = read_single_gauge(img, **config['indicator'])
+            except ValueError:
+                print(f'{img_path}, nan')
+                continue
+
+            value = reading['value']
+
+            # Apply units:
+            value *= multiplier
+
+            # Print:
+            print(f'{img_path}, {value:.5f}')
