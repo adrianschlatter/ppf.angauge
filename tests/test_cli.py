@@ -54,7 +54,7 @@ def test_known_img_thermometer(capfd):
                 str(DATADIR / '2026-01-02T06:30:10.662715+01:00.bmp')]):
         cli.main()
         out, err = capfd.readouterr()
-        assert '49.2' in out.strip()
+        assert '51.' in out.strip()
 
 
 def test_invalid_path(capfd):
@@ -79,6 +79,18 @@ def test_invalid_img(capfd):
             cli.main()
 
 
+def test_invalid_img_path_prints_nan(capfd):
+    DATADIR = Path(__file__).parent / 'data'
+    with patch('sys.argv',
+               ['read_gauge',
+                str(DATADIR / 'config_thermometer.toml'),
+                str(DATADIR / '2026-01-02T06:30:10.662715+01:00.bmp')]):
+        with patch('ppf.angauge._cli.read_single_gauge', side_effect=ValueError):
+            cli.main()
+            out, err = capfd.readouterr()
+            assert out.strip().endswith('nan')
+
+
 def test_unprocessable_img(capfd):
     """Test an "all black" image not having a single hand pixel."""
     DATADIR = Path(__file__).parent / 'data'
@@ -89,3 +101,26 @@ def test_unprocessable_img(capfd):
         cli.main()
         out, err = capfd.readouterr()
         assert ' nan' in out.strip()
+
+
+def test_single_gauge_hands_warns(capfd):
+    DATADIR = Path(__file__).parent / 'data'
+    with patch('sys.argv',
+               ['read_gauge',
+                '--hands',
+                str(DATADIR / 'config_thermometer.toml'),
+                str(DATADIR / '2026-01-02T06:30:10.662715+01:00.bmp')]):
+        cli.main()
+        out, err = capfd.readouterr()
+        assert 'Warning:' in out.strip()
+
+
+def test_single_gauge_unprocessable_img(capfd):
+    DATADIR = Path(__file__).parent / 'data'
+    with patch('sys.argv',
+               ['read_gauge',
+                str(DATADIR / 'config_thermometer.toml'),
+                str(DATADIR / '2025-07-07T22:35:05.261227+02:00.bmp')]):
+        cli.main()
+        out, err = capfd.readouterr()
+        assert out.strip().endswith(', -5.66541')

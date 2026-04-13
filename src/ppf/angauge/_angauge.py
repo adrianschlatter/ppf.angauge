@@ -150,13 +150,13 @@ def read_multi_gauge(img: NDArray, config: list[dict]) -> list[dict]:
         read_config().
     """
     readings = []
-    for i, cfg in enumerate(config['indicators']):
-        phi = cfg.get('phi', 0)
-        del cfg['phi']
-        reading = read_single_gauge(img, theta_min=phi,
-                                    hsv_to_gray=config['hsv_to_gray'],
-                                    gray_to_bw=config['gray_to_bw'],
-                                    **cfg)
+    for i, cfg in enumerate(config):
+        cfg_copy = cfg.copy()
+        phi = cfg_copy.get('phi', 0)
+        for prop in ['phi', 'theta_min']:
+            if prop in cfg_copy:
+                del cfg_copy[prop]
+        reading = read_single_gauge(img, theta_min=phi, **cfg_copy)
         reading['value'] = reading['value'] % 10
         readings.append(reading)
 
