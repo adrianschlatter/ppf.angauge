@@ -31,5 +31,4 @@ _archive/
 tests/data/2025-08-20T*.jpg
 tests/data/2025-08-20T*.bmp
 tests/data/2026-01-02*.jpg
-tests/data/2025-07-07*.bmp
 tests/data/*.xcf
