@@ -39,7 +39,7 @@ def test_deprecated_read_gauge_warns(capfd):
     from ppf.angauge import _angauge as angauge
     DATADIR = Path(__file__).parent / 'data'
     with patch.object(logging, 'warning') as warn:
-        with patch('ppf.angauge._angauge.read_multi_gauge', return_value=[]):
+        with patch.object(angauge, 'read_multi_gauge', return_value=[]):
             img = read_bmp_rectangle(
                 str(DATADIR / '2025-08-20T00:00:10.059926+02:00.bmp'),
                 x=0,
@@ -103,7 +103,8 @@ def test_invalid_img_path_prints_nan(capfd):
                ['read_gauge',
                 str(DATADIR / 'config_thermometer.toml'),
                 str(DATADIR / '2026-01-02T06:30:10.662715+01:00.bmp')]):
-        with patch('ppf.angauge._cli.read_single_gauge', side_effect=ValueError):
+        with patch('ppf.angauge._cli.read_single_gauge',
+                   side_effect=ValueError):
             cli.main()
             out, err = capfd.readouterr()
             assert out.strip().endswith('nan')
