@@ -86,52 +86,13 @@ def read_indicator(img_hand: NDArray,
     return (mu_theta % (2 * np.pi), sigma_theta)
 
 
-# @export
-# def read_gauge(img: NDArray, config: list[dict]) -> list[dict]:
-#     """
-#     Reads state of a meter with multiple clock-type indicators from an image.
-
-#     Parameters
-#     ----------
-
-#     img : np.ndarray-like
-#         Image (3D numpy array, h x w x color) of the entire meter.
-
-#     config : dict
-#         Configuration for image processing and clock positions, as returned by
-#         read_config().
-
-#     Returns
-#     -------
-
-#     list[dict]:
-#         List of dictionaries, one for each indicator. Each dictionary has
-#         'value' and 'sigma': 'value' is the estimated digit value, 'sigma'
-#         is the estimated uncertainty.
-#     """
-
-#     reading = []
-#     indicators = config['indicators']
-#     for i, cfg in enumerate(indicators):
-#         img_indicator = img[cfg['y0']: cfg['y0'] + cfg['w'],
-#                             cfg['x0']:(cfg['x0'] + cfg['w'])]
-#         theta, dtheta = read_indicator(img_indicator, config['hsv_to_gray'],
-#                                        config['gray_to_bw'])
-#         # compensate known rotation of clock:
-#         theta -= cfg['phi'] / 180. * np.pi
-
-#         # compensate elliptical distortion:
-#         theta += cfg.get('Asin', 0) / 180. * np.pi * np.sin(theta)
-#         theta += cfg.get('Acos', 0) / 180. * np.pi * np.cos(theta)
-
-#         # convert to digit:
-#         digit = theta / 2 / np.pi * 10
-#         ddigit = dtheta / 2 / np.pi * 10
-#         digit = digit % 10
-
-#         reading.append({'value': digit, 'sigma': ddigit})
-
-#     return reading
+@export
+def read_gauge(img: NDArray, config: list[dict]) -> list[dict]:
+    """DEPRECATED. Use read_multi_gauge() instead."""
+    import logging
+    logging.warning(
+            "read_gauge() is deprecated. Use read_multi_gauge() instead.")
+    return read_multi_gauge(img, config)
 
 
 @export
@@ -161,10 +122,6 @@ def read_multi_gauge(img: NDArray, config: list[dict]) -> list[dict]:
         readings.append(reading)
 
     return readings
-
-
-read_gauge = read_multi_gauge
-__all__.append('read_gauge')
 
 
 @export

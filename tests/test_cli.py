@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pytest
 from pathlib import Path
 from ppf.angauge import _cli as cli
+from ppf.angauge._io import read_bmp_rectangle
 
 
 def test_known_img_watermeter(capfd):
@@ -31,6 +32,23 @@ def test_multiplier_arg(capfd):
         cli.main()
         out, err = capfd.readouterr()
         assert '0.6331' in out.strip() or '0.6332' in out.strip()
+
+
+def test_deprecated_read_gauge_warns(capfd):
+    import logging
+    from ppf.angauge import _angauge as angauge
+    DATADIR = Path(__file__).parent / 'data'
+    with patch.object(logging, 'warning') as warn:
+        with patch('ppf.angauge._angauge.read_multi_gauge', return_value=[]):
+            img = read_bmp_rectangle(
+                str(DATADIR / '2025-08-20T00:00:10.059926+02:00.bmp'),
+                x=0,
+                y=0,
+                w=0,
+                h=0,
+            )
+            angauge.read_gauge(img, [{'x0': 0, 'y0': 0, 'w': 10}])
+        warn.assert_called_once()
 
 
 def test_hands_arg(capfd):
